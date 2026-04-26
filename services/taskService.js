@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-async function getAllTasks(cookies) {
+async function getAllTasks(cookie) {
   let page = 1;
   let allData = [];
   let hasMore = true;
@@ -10,8 +10,14 @@ async function getAllTasks(cookies) {
       console.log("FETCH PAGE:", page);
 
       const response = await axios.get(
-        `https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=${page}&orderBy=1&pageSize=20`,
+        "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
         {
+          params: {
+            category: 1,
+            pageNo: page,
+            orderBy: 1,
+            pageSize: 20
+          },
           headers: {
             "X-DESENSITIZE": "true",
             "X-COUNTRY-ID": "1",
@@ -25,20 +31,20 @@ async function getAllTasks(cookies) {
             "versionCode": "300",
             "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2",
-            "Cookie": cookies.join("; ")
+            "Cookie": cookie // 🔥 SUDAH FIX (STRING)
           }
         }
       );
 
-      console.log("RAW RESPONSE:", response.data);
+      console.log("RAW:", response.data);
 
-      const data = response.data?.data?.records || [];
+      const records = response.data?.data?.records || [];
 
-      if (!data || data.length === 0) {
-        console.log("DATA HABIS / KOSONG");
+      if (!records || records.length === 0) {
+        console.log("DATA HABIS");
         hasMore = false;
       } else {
-        allData = allData.concat(data);
+        allData = allData.concat(records);
         page++;
       }
     }
@@ -50,6 +56,8 @@ async function getAllTasks(cookies) {
     };
 
   } catch (error) {
+    console.log("ERROR TASK:", error.response?.data || error.message);
+
     return {
       success: false,
       error: error.message
