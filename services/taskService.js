@@ -7,6 +7,8 @@ async function getAllTasks(cookies) {
 
   try {
     while (hasMore) {
+      console.log("FETCH PAGE:", page);
+
       const response = await axios.get(
         `https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=${page}&orderBy=1&pageSize=20`,
         {
@@ -28,9 +30,12 @@ async function getAllTasks(cookies) {
         }
       );
 
+      console.log("RAW RESPONSE:", response.data);
+
       const data = response.data?.data?.records || [];
 
-      if (data.length === 0) {
+      if (!data || data.length === 0) {
+        console.log("DATA HABIS / KOSONG");
         hasMore = false;
       } else {
         allData = allData.concat(data);
