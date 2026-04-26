@@ -22,6 +22,8 @@ async function getCollectorInfo(cookies) {
       }
     );
 
+    console.log("PROFILE:", response.data);
+
     return response.data;
 
   } catch (error) {
