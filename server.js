@@ -1,28 +1,43 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const { login } = require("./services/loginService");
+const { getCollectorInfo } = require("./services/collectorService");
+const { getAllTasks } = require("./services/taskService");
 
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 
-app.post("/login", async (req, res) => {
-    const { account, password } = req.body;
+let savedCookies = [];
 
-    if (!account || !password) {
-        return res.json({ success: false, message: "Harus isi account & password" });
-    }
-
-    const result = await login(account, password);
-
-    res.json(result);
-});
-
+// Root
 app.get("/", (req, res) => {
-    res.send("Backend jalan 🚀");
+  res.send("Backend jalan 🚀");
 });
 
-const PORT = process.env.PORT || 3000;
+// LOGIN
+app.post("/login", async (req, res) => {
+  const { account, password } = req.body;
 
-app.listen(PORT, () => {
-    console.log("Server jalan di port " + PORT);
+  const result = await login(account, password);
+
+  if (result.cookies) {
+    savedCookies = result.cookies;
+  }
+
+  res.json(result);
+});
+
+// PROFILE
+app.get("/profile", async (req, res) => {
+  const result = await getCollectorInfo(savedCookies);
+  res.json(result);
+});
+
+// TASK LIST (ALL)
+app.get("/tasks", async (req, res) => {
+  const result = await getAllTasks(savedCookies);
+  res.json(result);
+});
+
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Server running 🚀");
 });
