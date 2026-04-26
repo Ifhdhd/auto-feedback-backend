@@ -23,6 +23,7 @@ async function getCollectorInfo(cookies) {
     );
 
     return response.data;
+
   } catch (error) {
     return {
       success: false,
