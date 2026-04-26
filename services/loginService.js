@@ -14,20 +14,29 @@ async function login(account, password) {
             },
             {
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json; charset=UTF-8",
                     "X-COUNTRY-ID": "-1",
                     "countryCode": "ID",
                     "timeZoneId": "Asia/Jakarta",
+                    "country": "ID",
                     "Accept-Language": "in-ID",
+                    "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+                    "deviceModel": "5030U",
+                    "osVersion": "10",
+                    "versionCode": "300",
+                    "versionName": "2.7.9-release",
+                    "Accept-Encoding": "gzip",
+                    "Connection": "Keep-Alive",
                     "User-Agent": "okhttp/4.9.2"
-                }
+                },
+                timeout: 15000
             }
         );
 
         return {
             success: true,
             data: response.data,
-            cookies: response.headers["set-cookie"]
+            cookies: response.headers["set-cookie"] || []
         };
 
     } catch (err) {
