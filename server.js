@@ -6,7 +6,7 @@ const { getAllTasks } = require("./services/taskService");
 const app = express();
 app.use(express.json());
 
-let savedCookies = [];
+let savedCookie = ""; // 🔥 sekarang STRING
 
 // ROOT
 app.get("/", (req, res) => {
@@ -19,15 +19,13 @@ app.post("/login", async (req, res) => {
 
   const result = await login(account, password);
 
-  if (result.cookies && result.cookies.length > 0) {
-    savedCookies = result.cookies;
+  if (result.cookies) {
+    savedCookie = result.cookies; // 🔥 STRING
 
-    console.log("LOGIN SUCCESS, COOKIE SAVED");
+    console.log("COOKIE:", savedCookie);
 
-    // 🔥 WAJIB: hit profile dulu
-    await getCollectorInfo(savedCookies);
-  } else {
-    console.log("LOGIN GAGAL / TANPA COOKIE");
+    // 🔥 trigger profile biar session aktif penuh
+    await getCollectorInfo(savedCookie);
   }
 
   res.json(result);
@@ -35,27 +33,26 @@ app.post("/login", async (req, res) => {
 
 // PROFILE
 app.get("/profile", async (req, res) => {
-  if (!savedCookies.length) {
+  if (!savedCookie) {
     return res.json({ error: "Belum login" });
   }
 
-  const result = await getCollectorInfo(savedCookies);
+  const result = await getCollectorInfo(savedCookie);
   res.json(result);
 });
 
 // TASKS
 app.get("/tasks", async (req, res) => {
-  if (!savedCookies.length) {
+  if (!savedCookie) {
     return res.json({ error: "Belum login" });
   }
 
-  const result = await getAllTasks(savedCookies);
+  const result = await getAllTasks(savedCookie);
 
-  // fallback kalau kosong
   if (result.total === 0) {
     return res.json({
       success: true,
-      message: "Kemungkinan sistem sedang libur / tidak ada data",
+      message: "Data kosong / kemungkinan session belum valid",
       total: 0,
       data: []
     });
@@ -64,6 +61,7 @@ app.get("/tasks", async (req, res) => {
   res.json(result);
 });
 
+// START
 app.listen(process.env.PORT || 3000, () => {
   console.log("Server running 🚀");
 });
