@@ -5,6 +5,10 @@ function md5(text) {
   return crypto.createHash("md5").update(text).digest("hex");
 }
 
+function cleanCookies(rawCookies) {
+  return rawCookies.map(c => c.split(";")[0]).join("; ");
+}
+
 async function login(account, password) {
   try {
     const response = await axios.post(
@@ -26,18 +30,19 @@ async function login(account, password) {
           "osVersion": "10",
           "versionCode": "300",
           "versionName": "2.7.9-release",
-          "Content-Type": "application/json; charset=UTF-8",
+          "Content-Type": "application/json",
           "User-Agent": "okhttp/4.9.2"
         }
       }
     );
 
-    const cookies = response.headers["set-cookie"] || [];
+    const rawCookies = response.headers["set-cookie"] || [];
+    const cookieString = cleanCookies(rawCookies);
 
     return {
       success: true,
       data: response.data,
-      cookies
+      cookies: cookieString // 🔥 FIX DI SINI
     };
 
   } catch (error) {
