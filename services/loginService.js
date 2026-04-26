@@ -37,7 +37,7 @@ async function login(account, password) {
     return {
       success: true,
       data: response.data,
-      cookies: cookies
+      cookies
     };
 
   } catch (error) {
