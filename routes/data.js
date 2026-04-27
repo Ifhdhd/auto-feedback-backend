@@ -25,9 +25,9 @@ router.post("/tasks", async (req, res) => {
   }
 });
 
-// 🔥 TAMBAH INI (feedback)
-router.post("/feedback", async (req, res) => {
-  const { cookies, taskId, addressId } = req.body;
+// 🔥 AUTO FEEDBACK SEMUA TASK
+router.post("/auto", async (req, res) => {
+  const { cookies } = req.body;
 
   if (!cookies) {
     return res.status(400).json({
@@ -37,8 +37,35 @@ router.post("/feedback", async (req, res) => {
   }
 
   try {
-    const result = await sendFeedback(cookies, taskId, addressId);
-    res.json(result);
+    const tasksResult = await getAllTasks(cookies);
+
+    if (!tasksResult.success) {
+      return res.json(tasksResult);
+    }
+
+    const tasks = tasksResult.data;
+
+    let results = [];
+
+    for (let t of tasks) {
+      const r = await sendFeedback(
+        cookies,
+        t.id,          // 🔥 ini penting
+        t.addressId    // 🔥 ini penting
+      );
+
+      results.push(r);
+
+      // delay biar aman
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    res.json({
+      success: true,
+      total: results.length,
+      results
+    });
+
   } catch (err) {
     res.status(500).json({
       success: false,
