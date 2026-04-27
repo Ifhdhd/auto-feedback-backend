@@ -3,29 +3,36 @@ const router = express.Router();
 
 const { getAllTasks, sendFeedback } = require("../services/dataService");
 
-// 🔥 ambil semua task
+// =====================
+// 📋 GET TASK
+// =====================
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
   if (!cookies) {
     return res.status(400).json({
       success: false,
-      message: "cookies wajib diisi"
+      message: "cookies wajib"
     });
   }
 
-  try {
-    const result = await getAllTasks(cookies);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
+  const result = await getAllTasks(cookies);
+  res.json(result);
 });
 
-// 🔥 AUTO FEEDBACK SEMUA TASK
+// =====================
+// 💬 FEEDBACK SATU
+// =====================
+router.post("/feedback", async (req, res) => {
+  const { cookies, task } = req.body;
+
+  const result = await sendFeedback(cookies, task);
+  res.json(result);
+});
+
+// =====================
+// 🚀 AUTO SEMUA TASK
+// =====================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
 
@@ -48,16 +55,12 @@ router.post("/auto", async (req, res) => {
     let results = [];
 
     for (let t of tasks) {
-      const r = await sendFeedback(
-        cookies,
-        t.id,          // 🔥 ini penting
-        t.addressId    // 🔥 ini penting
-      );
+      const r = await sendFeedback(cookies, t);
 
       results.push(r);
 
-      // delay biar aman
-      await new Promise(r => setTimeout(r, 2000));
+      // delay biar gak ke-ban
+      await new Promise(r => setTimeout(r, 1500));
     }
 
     res.json({
