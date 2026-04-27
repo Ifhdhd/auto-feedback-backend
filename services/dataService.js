@@ -38,7 +38,7 @@ async function getAllTasks(cookies) {
       const result = response.data;
 
       const list = result?.data?.data?.data || [];
-      total = result?.data?.total || 0;
+      const total = result?.data?.data?.total || 0;
 
       if (list.length === 0) {
         hasMore = false;
