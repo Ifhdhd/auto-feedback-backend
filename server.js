@@ -6,7 +6,7 @@ const app = express();
 const authRoutes = require("./routes/auth");
 const dataRoutes = require("./routes/data");
 
-app.use(cors()); // 🔥 wajib biar frontend bisa akses
+app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
