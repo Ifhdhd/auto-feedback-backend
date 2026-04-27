@@ -3,60 +3,34 @@ const router = express.Router();
 
 const { getAllTasks, sendFeedback } = require("../services/dataService");
 
-// ==========================
-// 📋 AMBIL TASK
-// ==========================
+// ambil task
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
   if (!cookies) {
-    return res.status(400).json({
-      success: false,
-      message: "cookies wajib diisi"
-    });
+    return res.status(400).json({ success: false, message: "cookies wajib" });
   }
 
-  try {
-    const result = await getAllTasks(cookies);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
+  const result = await getAllTasks(cookies);
+  res.json(result);
 });
 
-
-// ==========================
-// 🚀 AUTO (FIX TIMEOUT)
-// ==========================
+// 🔥 AUTO BACKGROUND (ANTI TIMEOUT)
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
 
   if (!cookies) {
-    return res.status(400).json({
-      success: false,
-      message: "cookies wajib"
-    });
+    return res.status(400).json({ success: false });
   }
 
-  // 🔥 jalanin di background (TIDAK DI AWAIT)
-  runAutoFeedback(cookies);
-
-  // 🔥 langsung response biar gak timeout
+  // langsung balikin response dulu
   res.json({
     success: true,
-    message: "Auto feedback jalan di background 🚀"
+    message: "Auto jalan di background"
   });
-});
 
-
-// ==========================
-// 🔥 FUNCTION BACKGROUND
-// ==========================
-async function runAutoFeedback(cookies) {
-  try {
+  // 🔥 background process
+  (async () => {
     console.log("🚀 mulai auto feedback...");
 
     const tasksResult = await getAllTasks(cookies);
@@ -67,27 +41,18 @@ async function runAutoFeedback(cookies) {
     }
 
     const tasks = tasksResult.data;
-
     console.log("Total task:", tasks.length);
 
     for (let t of tasks) {
-      const r = await sendFeedback(
-        cookies,
-        t.id,        // ⚠️ HARUS ID
-        t.addressId  // ⚠️ HARUS ADA
-      );
+      const result = await sendFeedback(cookies, t);
 
-      console.log("✔️ task:", t.id);
+      console.log("feedback:", result);
 
-      // delay biar aman
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 2000));
     }
 
     console.log("✅ selesai semua");
-
-  } catch (err) {
-    console.log("❌ error:", err.message);
-  }
-}
+  })();
+});
 
 module.exports = router;
