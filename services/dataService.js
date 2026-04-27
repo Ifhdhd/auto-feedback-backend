@@ -2,12 +2,11 @@ const axios = require("axios");
 
 async function getAllTasks(cookies) {
   try {
-    const cookieString = cookies
-      .map(c => c.split(";")[0]) // 🔥 ambil hanya key=value
-      .join("; ");
+    const cookieString = cookies.join("; ");
 
     let page = 1;
     let allData = [];
+    let total = 0;
     let hasMore = true;
 
     while (hasMore) {
@@ -28,19 +27,27 @@ async function getAllTasks(cookies) {
             "versionCode": "300",
             "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2"
-          }
+          },
+          validateStatus: () => true
         }
       );
 
       const result = response.data;
 
-      const list = result?.data?.list || [];
+      // 🔥 ambil data yang benar
+      const list = result?.data?.data || [];
+      total = result?.data?.total || 0;
 
       if (list.length === 0) {
         hasMore = false;
       } else {
         allData.push(...list);
         page++;
+      }
+
+      // optional: stop kalau sudah ambil semua
+      if (allData.length >= total) {
+        hasMore = false;
       }
     }
 
