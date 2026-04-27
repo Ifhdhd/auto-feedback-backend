@@ -4,13 +4,16 @@ const router = express.Router();
 const { getAllTasks, sendFeedback } = require("../services/dataService");
 
 // =====================
-// GET TASK
+// 📋 GET TASK
 // =====================
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
   if (!cookies) {
-    return res.json({ success: false, message: "cookies kosong" });
+    return res.status(400).json({
+      success: false,
+      message: "cookies wajib diisi"
+    });
   }
 
   const result = await getAllTasks(cookies);
@@ -18,34 +21,53 @@ router.post("/tasks", async (req, res) => {
 });
 
 // =====================
-// AUTO FEEDBACK
+// 🔥 AUTO BACKGROUND
 // =====================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
 
-  res.json({ success: true, message: "Auto jalan..." });
+  if (!cookies) {
+    return res.status(400).json({
+      success: false,
+      message: "cookies wajib"
+    });
+  }
+
+  res.json({
+    success: true,
+    message: "Auto berjalan di background"
+  });
 
   (async () => {
+    console.log("🚀 mulai auto feedback...");
+
     const tasksResult = await getAllTasks(cookies);
 
-    if (!tasksResult.success) return;
-
-    let success = 0;
-    let failed = 0;
-
-    for (let t of tasksResult.data) {
-      const r = await sendFeedback(cookies, t);
-
-      if (r.success === true || r.code === "0") success++;
-      else failed++;
-
-      console.log(`Task ${t.id} ->`, r.success ? "OK" : "FAIL");
-
-      await new Promise(r => setTimeout(r, 3000));
+    if (!tasksResult.success) {
+      console.log("❌ gagal ambil task");
+      return;
     }
 
-    console.log("✅ sukses:", success);
-    console.log("❌ gagal:", failed);
+    const tasks = tasksResult.data;
+    console.log("Total task:", tasks.length);
+
+    for (let t of tasks) {
+
+      // ✅ FIX DISINI
+      if (!t.id || !t.addressBo || !t.addressBo.addressId) {
+        console.log("⛔ skip:", t.id);
+        continue;
+      }
+
+      console.log("➡️ proses:", t.id);
+
+      const r = await sendFeedback(cookies, t);
+      console.log("RESULT:", r);
+
+      await new Promise(r => setTimeout(r, 2000)); // delay aman
+    }
+
+    console.log("🎉 selesai semua");
   })();
 });
 
