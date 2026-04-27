@@ -1,95 +1,83 @@
 const axios = require("axios");
 
-const BASE_URL = "https://ez-co-app.tin.group";
-
-function checkExpired(createTime) {
-  const now = Date.now();
-  const created = Number(createTime);
-
-  const diffDays = (now - created) / (1000 * 60 * 60 * 24);
-
-  return {
-    days: Math.floor(diffDays),
-    expired: diffDays >= 20,
-    warning: diffDays >= 18
-  };
-}
-
-function getLastFeedback(records) {
-  if (!records || records.length === 0) return null;
-
-  return records.sort(
-    (a, b) => Number(b.createTime) - Number(a.createTime)
-  )[0];
-}
-
-async function getTasks(cookie) {
+async function getTasks(cookies) {
   try {
-    const res = await axios.get(
-      `${BASE_URL}/app/offline/task/queryTaskList`,
-      {
-        params: {
-          category: 1,
-          pageNo: 1,
-          pageSize: 200,
-          orderBy: 1
-        },
-        headers: {
-          Cookie: cookie,
-          "User-Agent": "okhttp/4.9.2"
+    let cookieHeader = "";
+
+    if (Array.isArray(cookies)) {
+      cookieHeader = cookies.join("; ");
+    } else if (typeof cookies === "string") {
+      cookieHeader = cookies;
+    } else {
+      throw new Error("Format cookies tidak valid");
+    }
+
+    let allData = [];
+    let page = 1;
+    let total = 0;
+
+    while (true) {
+      const res = await axios.get(
+        "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
+        {
+          params: {
+            category: 1,
+            pageNo: page,
+            orderBy: 1,
+            pageSize: 20,
+          },
+          headers: {
+            "X-DESENSITIZE": "true",
+            "X-COUNTRY-ID": "1",
+            "countryCode": "ID",
+            "timeZoneId": "Asia/Jakarta",
+            "country": "ID",
+            "Accept-Language": "in-ID",
+            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+            "deviceModel": "5030U",
+            "osVersion": "10",
+            "versionCode": "300",
+            "versionName": "2.7.9-release",
+            "User-Agent": "okhttp/4.9.2",
+            "Cookie": cookieHeader,
+          },
         }
+      );
+
+      const responseData = res.data;
+
+      if (!responseData.success) {
+        return {
+          success: false,
+          error: responseData.message,
+        };
       }
-    );
 
-    const tasks = res.data.data.data;
+      // ✅ INI FIX NYA
+      const list = responseData.data?.data || [];
+      total = responseData.data?.total || 0;
 
-    // 🔥 loop semua task
-    for (let task of tasks) {
-      try {
-        const historyRes = await axios.get(
-          `${BASE_URL}/app/offline/task/case/record/queryCaseRecord`,
-          {
-            params: {
-              caseId: task.caseId,
-              pageNo: 1,
-              pageSize: 50
-            },
-            headers: {
-              Cookie: cookie,
-              "User-Agent": "okhttp/4.9.2"
-            }
-          }
-        );
+      allData = allData.concat(list);
 
-        const records = historyRes.data.data.data;
+      console.log(`Page ${page} → ${list.length} data`);
 
-        const last = getLastFeedback(records);
-
-        if (last) {
-          const status = checkExpired(last.createTime);
-
-          task.lastFeedback = last.createTime;
-          task.daysSinceFeedback = status.days;
-          task.isExpired = status.expired;
-          task.isWarning = status.warning;
-          task.feedbackDesc = last.actionReferDesc;
-        }
-
-      } catch (err) {
-        console.log("history error:", task.caseId);
+      if (allData.length >= total || list.length === 0) {
+        break;
       }
+
+      page++;
     }
 
     return {
       success: true,
-      total: tasks.length,
-      data: tasks
+      total: total,
+      data: allData,
     };
 
   } catch (err) {
     return {
       success: false,
-      error: err.message
+      error: err.message,
     };
   }
 }
