@@ -1,5 +1,6 @@
 const axios = require("axios");
 const md5 = require("../utils/md5");
+const { createSession } = require("../utils/sessionStore");
 
 async function login(account, password) {
   try {
@@ -31,10 +32,22 @@ async function login(account, password) {
       }
     );
 
+    const cookies = response.headers["set-cookie"];
+
+    if (!cookies) {
+      return {
+        success: false,
+        message: "Login gagal"
+      };
+    }
+
+    // 🔥 bikin token session
+    const token = createSession(cookies);
+
     return {
       success: true,
-      data: response.data,
-      cookies: response.headers["set-cookie"] || []
+      token,
+      data: response.data
     };
 
   } catch (error) {
