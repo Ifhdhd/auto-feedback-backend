@@ -68,14 +68,15 @@ async function getAllTasks(cookies) {
 }
 
 // =====================
-// 💬 FEEDBACK
+// 💬 FEEDBACK (FIX TOTAL)
 // =====================
 async function sendFeedback(cookies, task) {
   try {
-    if (!task.id || !task.addressId) {
+    // ✅ FIX VALIDASI
+    if (!task.id || !task.addressBo || !task.addressBo.addressId) {
       return {
         success: false,
-        error: "task tidak valid (id/addressId kosong)"
+        error: "task tidak valid"
       };
     }
 
@@ -84,7 +85,7 @@ async function sendFeedback(cookies, task) {
     const payload = {
       actionResultId: 166,
       actionResultSerialNo: "X0019",
-      addressId: task.addressId, // 🔥 WAJIB ADA
+      addressId: Number(task.addressBo.addressId), // ✅ FIX UTAMA
       assistTaskType: 0,
       createTime: Date.now(),
       feedbackType: "X0019",
@@ -92,7 +93,7 @@ async function sendFeedback(cookies, task) {
       ptpAmount: 0.0,
       ptpTime: 0,
       remark: "",
-      taskId: task.id
+      taskId: Number(task.id)
     };
 
     const res = await axios.post(
@@ -117,7 +118,7 @@ async function sendFeedback(cookies, task) {
   } catch (err) {
     return {
       success: false,
-      error: err.message
+      error: err.response?.data || err.message
     };
   }
 }
