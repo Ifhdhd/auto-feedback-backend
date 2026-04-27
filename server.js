@@ -12,7 +12,9 @@ app.get("/", (req, res) => {
   res.send("Backend jalan 🚀");
 });
 
+// ======================
 // ✅ LOGIN
+// ======================
 app.post("/login", async (req, res) => {
   try {
     const { account, password } = req.body;
@@ -23,7 +25,42 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// ✅ AUTO FEEDBACK SEMUA TASK
+// ======================
+// ✅ GET TASKS (FIX 404)
+// ======================
+app.post("/tasks", async (req, res) => {
+  try {
+    const { cookies } = req.body;
+
+    const result = await getTasks(cookies);
+
+    if (!result.success) {
+      return res.json(result);
+    }
+
+    const tasks = result.data.map((t, i) => ({
+      no: i + 1,
+      taskId: t.id,
+      addressId: t.addressId
+    }));
+
+    res.json({
+      success: true,
+      total: result.total,
+      tasks
+    });
+
+  } catch (err) {
+    res.json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// ======================
+// ✅ AUTO FEEDBACK
+// ======================
 app.post("/auto-feedback", async (req, res) => {
   try {
     const { cookies } = req.body;
@@ -46,6 +83,7 @@ app.post("/auto-feedback", async (req, res) => {
     let results = [];
 
     for (let task of tasks) {
+
       const r = await sendFeedback(cookies, task);
 
       console.log(`✔️ Task ${task.id} dikirim`);
@@ -55,7 +93,7 @@ app.post("/auto-feedback", async (req, res) => {
         result: r,
       });
 
-      // 🔥 delay biar aman
+      // 🔥 delay biar aman (2 detik)
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
