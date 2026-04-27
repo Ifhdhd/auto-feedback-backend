@@ -12,7 +12,7 @@ router.post("/tasks", async (req, res) => {
   if (!cookies) {
     return res.status(400).json({
       success: false,
-      message: "cookies wajib"
+      message: "cookies wajib diisi"
     });
   }
 
@@ -20,9 +20,8 @@ router.post("/tasks", async (req, res) => {
   res.json(result);
 });
 
-
 // =====================
-// 💬 AUTO FEEDBACK (BACKGROUND)
+// 🔥 AUTO BACKGROUND (ANTI TIMEOUT)
 // =====================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
@@ -34,13 +33,13 @@ router.post("/auto", async (req, res) => {
     });
   }
 
-  // 🔥 langsung balikin response biar gak timeout
+  // ⚡ langsung balikin response (biar gak timeout)
   res.json({
     success: true,
-    message: "Auto feedback jalan di background"
+    message: "Auto berjalan di background"
   });
 
-  // 🔥 proses background
+  // 🔥 proses di belakang
   (async () => {
     console.log("🚀 mulai auto feedback...");
 
@@ -56,17 +55,23 @@ router.post("/auto", async (req, res) => {
     console.log("Total task:", tasks.length);
 
     for (let t of tasks) {
-      console.log("Proses task:", t.id);
+      // 🔥 FIX PENTING
+      if (!t.id || !t.addressId) {
+        console.log("⛔ skip:", t.id);
+        continue;
+      }
+
+      console.log("➡️ proses:", t.id);
 
       const r = await sendFeedback(cookies, t);
 
-      console.log("Result:", r);
+      console.log("RESULT:", r);
 
-      // delay biar aman
-      await new Promise(r => setTimeout(r, 2000));
+      // 🔥 delay biar gak 401
+      await new Promise(r => setTimeout(r, 3000));
     }
 
-    console.log("✅ selesai semua");
+    console.log("🎉 selesai semua");
   })();
 });
 
