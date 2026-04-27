@@ -1,5 +1,8 @@
 const axios = require("axios");
 
+// =====================
+// 📋 AMBIL TASK
+// =====================
 async function getAllTasks(cookies) {
   try {
     const cookieString = cookies.join("; ");
@@ -34,7 +37,6 @@ async function getAllTasks(cookies) {
 
       const result = response.data;
 
-      // 🔥 ambil data yang benar
       const list = result?.data?.data || [];
       total = result?.data?.total || 0;
 
@@ -45,7 +47,6 @@ async function getAllTasks(cookies) {
         page++;
       }
 
-      // optional: stop kalau sudah ambil semua
       if (allData.length >= total) {
         hasMore = false;
       }
@@ -65,4 +66,52 @@ async function getAllTasks(cookies) {
   }
 }
 
-module.exports = { getAllTasks };
+// =====================
+// 💬 FEEDBACK
+// =====================
+async function sendFeedback(cookies, taskId, addressId) {
+  try {
+    const cookieString = cookies.join("; ");
+
+    const payload = {
+      "actionResultId": 166,
+      "actionResultSerialNo": "X0019",
+      "addressId": addressId,
+      "assistTaskType": 0,
+      "createTime": Date.now(),
+      "feedbackType": "X0019",
+      "promise": 0,
+      "ptpAmount": 0.0,
+      "ptpTime": 0,
+      "remark": "",
+      "taskId": taskId
+    };
+
+    const res = await axios.post(
+      "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
+      payload,
+      {
+        headers: {
+          "Cookie": cookieString,
+          "Content-Type": "application/json",
+          "User-Agent": "okhttp/4.9.2"
+        }
+      }
+    );
+
+    return {
+      success: true,
+      taskId,
+      response: res.data
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      taskId,
+      error: err.message
+    };
+  }
+}
+
+module.exports = { getAllTasks, sendFeedback };
