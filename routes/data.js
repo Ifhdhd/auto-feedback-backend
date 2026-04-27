@@ -1,73 +1,71 @@
 const express = require("express");
 const router = express.Router();
 
+const { getSession } = require("../utils/sessionStore");
 const { getAllTasks, sendFeedback } = require("../services/dataService");
 
 // =====================
-// 📋 GET TASK
+// 📋 TASKS
 // =====================
 router.post("/tasks", async (req, res) => {
-  const { cookies } = req.body;
+  const { token } = req.body;
 
-  if (!cookies) {
-    return res.status(400).json({
+  const session = getSession(token);
+
+  if (!session) {
+    return res.status(401).json({
       success: false,
-      message: "cookies wajib diisi"
+      message: "Session expired"
     });
   }
 
-  const result = await getAllTasks(cookies);
+  const result = await getAllTasks(session.cookies);
   res.json(result);
 });
 
 // =====================
-// 🔥 AUTO BACKGROUND
+// 🔥 AUTO
 // =====================
 router.post("/auto", async (req, res) => {
-  const { cookies } = req.body;
+  const { token } = req.body;
 
-  if (!cookies) {
-    return res.status(400).json({
+  const session = getSession(token);
+
+  if (!session) {
+    return res.status(401).json({
       success: false,
-      message: "cookies wajib"
+      message: "Session expired"
     });
   }
 
   res.json({
     success: true,
-    message: "Auto berjalan di background"
+    message: "Auto jalan di background"
   });
 
   (async () => {
-    console.log("🚀 mulai auto feedback...");
+    const tasksResult = await getAllTasks(session.cookies);
 
-    const tasksResult = await getAllTasks(cookies);
-
-    if (!tasksResult.success) {
-      console.log("❌ gagal ambil task");
-      return;
-    }
+    if (!tasksResult.success) return;
 
     const tasks = tasksResult.data;
-    console.log("Total task:", tasks.length);
+
+    let successCount = 0;
+    let failCount = 0;
 
     for (let t of tasks) {
+      if (!t.id || !t.addressBo?.addressId) continue;
 
-      // ✅ FIX DISINI
-      if (!t.id || !t.addressBo || !t.addressBo.addressId) {
-        console.log("⛔ skip:", t.id);
-        continue;
-      }
+      const r = await sendFeedback(session.cookies, t);
 
-      console.log("➡️ proses:", t.id);
+      if (r.success) successCount++;
+      else failCount++;
 
-      const r = await sendFeedback(cookies, t);
-      console.log("RESULT:", r);
-
-      await new Promise(r => setTimeout(r, 2000)); // delay aman
+      await new Promise(r => setTimeout(r, 2000));
     }
 
-    console.log("🎉 selesai semua");
+    console.log("✅ success:", successCount);
+    console.log("❌ fail:", failCount);
   })();
 });
 
