@@ -23,6 +23,16 @@ async function sendFeedback(cookies, task) {
       },
       {
         headers: {
+          "X-COUNTRY-ID": "1",
+          "countryCode": "ID",
+          "timeZoneId": "Asia/Jakarta",
+          "country": "ID",
+          "Accept-Language": "in-ID",
+          "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+          "deviceModel": "5030U",
+          "osVersion": "10",
+          "versionCode": "300",
+          "versionName": "2.7.9-release",
           "Content-Type": "application/json",
           "User-Agent": "okhttp/4.9.2",
           "Cookie": cookies,
@@ -30,9 +40,13 @@ async function sendFeedback(cookies, task) {
       }
     );
 
+    console.log("RESP:", res.data);
+
     return res.data;
 
   } catch (err) {
+    console.log("ERROR:", err.response?.data || err.message);
+
     return { success: false, error: err.message };
   }
 }
