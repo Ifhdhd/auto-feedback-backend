@@ -16,7 +16,7 @@ async function sendFeedback(cookies, task) {
         assistTaskType: 0,
         createTime: now(),
         promise: 0,
-        ptpAmount: 0.0,
+        ptpAmount: 0,
         ptpTime: 0,
         remark: "",
         taskId: task.id
@@ -33,10 +33,7 @@ async function sendFeedback(cookies, task) {
     return res.data;
 
   } catch (err) {
-    return {
-      success: false,
-      error: err.message,
-    };
+    return { success: false, error: err.message };
   }
 }
 
