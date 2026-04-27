@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 
 const authRoutes = require("./routes/auth");
+const dataRoutes = require("./routes/data"); // ✅ TAMBAH INI
 
 app.use(express.json());
 
@@ -12,6 +13,7 @@ app.get("/", (req, res) => {
 
 // route
 app.use("/api", authRoutes);
+app.use("/api", dataRoutes); // ✅ TAMBAH INI
 
 // ⚠️ wajib untuk render
 const PORT = process.env.PORT || 3000;
