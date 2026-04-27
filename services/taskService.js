@@ -8,14 +8,13 @@ async function getTasks(cookies) {
 
     let allData = [];
     let page = 1;
-    let total = 0;
 
     while (true) {
       const res = await axios.get(
         "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
         {
           params: {
-            category: 2, // 🔥 kamu pakai ini sekarang
+            category: 2,
             pageNo: page,
             orderBy: 1,
             pageSize: 20,
@@ -45,28 +44,21 @@ async function getTasks(cookies) {
       }
 
       const list = data.data?.data || [];
-      total = parseInt(data.data?.total || 0);
 
-      // 🔥 FIX UTAMA ADA DI SINI
-      const mapped = list
-        .map(item => ({
-          id: item.id,
-          addressId: item.addressBo?.addressId
-        }))
-        .filter(item => item.id && item.addressId);
+      // 🔥 LANGSUNG GABUNG TANPA FILTER
+      allData = allData.concat(list);
 
-      allData = allData.concat(mapped);
+      console.log(`Page ${page} → ${list.length} data`);
 
-      console.log(`Page ${page} → ${mapped.length} valid task`);
-
-      if (allData.length >= total || list.length === 0) break;
+      // ❗ STOP HANYA JIKA DATA HABIS
+      if (list.length === 0) break;
 
       page++;
     }
 
     return {
       success: true,
-      total,
+      total: allData.length,
       data: allData,
     };
 
