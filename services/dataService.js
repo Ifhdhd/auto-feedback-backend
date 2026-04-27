@@ -2,7 +2,9 @@ const axios = require("axios");
 
 async function getAllTasks(cookies) {
   try {
-    const cookieString = cookies.join("; ");
+    const cookieString = cookies
+      .map(c => c.split(";")[0]) // 🔥 ambil hanya key=value
+      .join("; ");
 
     let page = 1;
     let allData = [];
@@ -26,17 +28,18 @@ async function getAllTasks(cookies) {
             "versionCode": "300",
             "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2"
-          },
-          validateStatus: () => true
+          }
         }
       );
 
       const result = response.data;
 
-      if (!result?.data || result.data.length === 0) {
+      const list = result?.data?.list || [];
+
+      if (list.length === 0) {
         hasMore = false;
       } else {
-        allData.push(...result.data);
+        allData.push(...list);
         page++;
       }
     }
