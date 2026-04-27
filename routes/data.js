@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-const { getAllTasks, sendFeedback } = require("../services/dataService");
+const { getAllTasks, autoFeedback } = require("../services/dataService");
 
-// 🔥 ambil semua task
+// ======================
+// 📋 GET ALL TASKS
+// ======================
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
@@ -25,19 +27,21 @@ router.post("/tasks", async (req, res) => {
   }
 });
 
-// 🔥 TAMBAH INI (feedback)
-router.post("/feedback", async (req, res) => {
-  const { cookies, taskId, addressId } = req.body;
+// ======================
+// 🚀 AUTO FEEDBACK
+// ======================
+router.post("/auto", async (req, res) => {
+  const { cookies } = req.body;
 
   if (!cookies) {
     return res.status(400).json({
       success: false,
-      message: "cookies wajib"
+      message: "cookies wajib diisi"
     });
   }
 
   try {
-    const result = await sendFeedback(cookies, taskId, addressId);
+    const result = await autoFeedback(cookies);
     res.json(result);
   } catch (err) {
     res.status(500).json({
