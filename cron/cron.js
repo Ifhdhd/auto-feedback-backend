@@ -1,8 +1,7 @@
 const cron = require("node-cron");
-const { getTasks } = require("./taskService");
-const { sendFeedback } = require("./feedbackService");
-const { addNotif } = require("./notifStore");
-
+const { getTasks } = require("auto-feedback-backend/services/taskService");
+const { sendFeedback } = require("auto-feedback-backend/services/feedbackService");
+const { addNotif } = require("auto-feedback-backend/utils/notifStore");
 let COOKIE = "";
 
 // 🔥 nanti isi dari login
