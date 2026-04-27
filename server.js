@@ -14,12 +14,17 @@ const {
 const app = express();
 app.use(bodyParser.json());
 
+let feedbackResults = [];
+
+// ======================
+// ROOT
+// ======================
 app.get("/", (req, res) => {
   res.send("Backend jalan 🚀");
 });
 
 // ======================
-// ✅ LOGIN
+// LOGIN
 // ======================
 app.post("/login", async (req, res) => {
   try {
@@ -32,7 +37,7 @@ app.post("/login", async (req, res) => {
 });
 
 // ======================
-// 🚀 START AMBIL SEMUA TASK (NO TIMEOUT)
+// START TASK (BACKGROUND)
 // ======================
 app.post("/tasks-start", async (req, res) => {
   const { cookies } = req.body;
@@ -41,21 +46,21 @@ app.post("/tasks-start", async (req, res) => {
 });
 
 // ======================
-// 📊 STATUS
+// STATUS
 // ======================
 app.get("/tasks-status", (req, res) => {
   res.json(getStatus());
 });
 
 // ======================
-// 📦 HASIL SEMUA TASK
+// RESULT TASK
 // ======================
 app.get("/tasks-result", (req, res) => {
   res.json(getResult());
 });
 
 // ======================
-// 🎯 AUTO FEEDBACK (DARI HASIL FULL)
+// AUTO FEEDBACK (TRACKING)
 // ======================
 app.post("/auto-feedback", async (req, res) => {
   try {
@@ -66,33 +71,70 @@ app.post("/auto-feedback", async (req, res) => {
     if (tasks.length === 0) {
       return res.json({
         success: false,
-        message: "Belum ada task atau belum load",
+        message: "Belum ada task",
       });
     }
 
-    // 🔥 langsung respon dulu (anti timeout)
+    feedbackResults = [];
+
     res.json({
       success: true,
       message: "Auto feedback dimulai",
       total: tasks.length
     });
 
-    // 🔥 jalan di background
     (async () => {
       for (let task of tasks) {
+        console.log("SEND:", task);
+
         const r = await sendFeedback(cookies, task);
 
-        console.log("✔️", task.id, r.success);
+        const isSuccess = r.success || r.code === "0";
+
+        const resultData = {
+          taskId: task.id,
+          name: task.name,
+          addressId: task.addressId,
+          success: isSuccess,
+          response: r
+        };
+
+        feedbackResults.push(resultData);
+
+        if (isSuccess) {
+          console.log(`✅ ${task.name} (${task.id})`);
+        } else {
+          console.log(`❌ ${task.name} (${task.id})`, r);
+        }
 
         await new Promise(r => setTimeout(r, 2000));
       }
 
-      console.log("✅ AUTO FEEDBACK SELESAI");
+      console.log("===== SELESAI AUTO FEEDBACK =====");
+
     })();
 
   } catch (err) {
     console.log(err.message);
   }
+});
+
+// ======================
+// LIHAT SEMUA HASIL
+// ======================
+app.get("/feedback-result", (req, res) => {
+  res.json({
+    total: feedbackResults.length,
+    data: feedbackResults
+  });
+});
+
+// ======================
+// LIHAT YANG SUKSES
+// ======================
+app.get("/feedback-success", (req, res) => {
+  const success = feedbackResults.filter(i => i.success);
+  res.json(success);
 });
 
 const PORT = process.env.PORT || 3000;
