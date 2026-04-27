@@ -1,22 +1,31 @@
 const axios = require("axios");
 
-async function getAllTasks(cookie) {
-  let page = 1;
-  let allData = [];
-  let hasMore = true;
-
+async function getTasks(cookies) {
   try {
-    while (hasMore) {
-      console.log("FETCH PAGE:", page);
+    // 🔥 HANDLE COOKIE STRING / ARRAY
+    let cookieHeader = "";
 
-      const response = await axios.get(
+    if (Array.isArray(cookies)) {
+      cookieHeader = cookies.join("; ");
+    } else if (typeof cookies === "string") {
+      cookieHeader = cookies;
+    } else {
+      throw new Error("Format cookies tidak valid");
+    }
+
+    let allData = [];
+    let page = 1;
+    let total = 0;
+
+    while (true) {
+      const res = await axios.get(
         "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
         {
           params: {
             category: 1,
             pageNo: page,
             orderBy: 1,
-            pageSize: 20
+            pageSize: 20,
           },
           headers: {
             "X-DESENSITIZE": "true",
@@ -31,38 +40,45 @@ async function getAllTasks(cookie) {
             "versionCode": "300",
             "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2",
-            "Cookie": cookie // 🔥 SUDAH FIX (STRING)
-          }
+            "Cookie": cookieHeader,
+          },
         }
       );
 
-      console.log("RAW:", response.data);
+      const responseData = res.data;
 
-      const records = response.data?.data?.records || [];
-
-      if (!records || records.length === 0) {
-        console.log("DATA HABIS");
-        hasMore = false;
-      } else {
-        allData = allData.concat(records);
-        page++;
+      if (!responseData.success) {
+        return {
+          success: false,
+          error: responseData.message,
+        };
       }
+
+      const list = responseData.data?.records || [];
+      total = responseData.data?.total || 0;
+
+      allData = allData.concat(list);
+
+      console.log(`Page ${page} → ${list.length} data`);
+
+      if (allData.length >= total || list.length === 0) {
+        break;
+      }
+
+      page++;
     }
 
     return {
       success: true,
-      total: allData.length,
-      data: allData
+      total: total,
+      data: allData,
     };
-
-  } catch (error) {
-    console.log("ERROR TASK:", error.response?.data || error.message);
-
+  } catch (err) {
     return {
       success: false,
-      error: error.message
+      error: err.message,
     };
   }
 }
 
-module.exports = { getAllTasks };
+module.exports = { getTasks };
