@@ -1,22 +1,19 @@
 const axios = require("axios");
 const crypto = require("crypto");
 
+// 🔥 HASH PASSWORD (MD5)
 function md5(text) {
   return crypto.createHash("md5").update(text).digest("hex");
 }
 
-function cleanCookies(rawCookies) {
-  return rawCookies.map(c => c.split(";")[0]).join("; ");
-}
-
 async function login(account, password) {
   try {
-    const response = await axios.post(
+    const res = await axios.post(
       "https://ez-co-app.tin.group/app/offline/user/login",
       {
         account: account,
-        pwd: md5(password),
-        appVersion: "0"
+        pwd: md5(password), // 🔥 WAJIB MD5
+        appVersion: "0",
       },
       {
         headers: {
@@ -31,24 +28,27 @@ async function login(account, password) {
           "versionCode": "300",
           "versionName": "2.7.9-release",
           "Content-Type": "application/json",
-          "User-Agent": "okhttp/4.9.2"
-        }
+          "User-Agent": "okhttp/4.9.2",
+        },
       }
     );
 
-    const rawCookies = response.headers["set-cookie"] || [];
-    const cookieString = cleanCookies(rawCookies);
+    // 🔥 AMBIL COOKIE
+    const setCookie = res.headers["set-cookie"];
+
+    const cookies = setCookie
+      ? setCookie.map((c) => c.split(";")[0]).join("; ")
+      : "";
 
     return {
       success: true,
-      data: response.data,
-      cookies: cookieString // 🔥 FIX DI SINI
+      data: res.data,
+      cookies: cookies, // 🔥 STRING FIX
     };
-
-  } catch (error) {
+  } catch (err) {
     return {
       success: false,
-      error: error.message
+      error: err.message,
     };
   }
 }
