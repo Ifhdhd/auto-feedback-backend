@@ -1,7 +1,6 @@
 const axios = require("axios");
 const crypto = require("crypto");
 
-// 🔥 HASH PASSWORD (MD5)
 function md5(text) {
   return crypto.createHash("md5").update(text).digest("hex");
 }
@@ -12,7 +11,7 @@ async function login(account, password) {
       "https://ez-co-app.tin.group/app/offline/user/login",
       {
         account: account,
-        pwd: md5(password), // 🔥 WAJIB MD5
+        pwd: md5(password),
         appVersion: "0",
       },
       {
@@ -33,7 +32,6 @@ async function login(account, password) {
       }
     );
 
-    // 🔥 AMBIL COOKIE
     const setCookie = res.headers["set-cookie"];
 
     const cookies = setCookie
@@ -42,9 +40,10 @@ async function login(account, password) {
 
     return {
       success: true,
+      cookies,
       data: res.data,
-      cookies: cookies, // 🔥 STRING FIX
     };
+
   } catch (err) {
     return {
       success: false,
