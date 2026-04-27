@@ -2,7 +2,6 @@ const axios = require("axios");
 
 async function getTasks(cookies) {
   try {
-    // 🔥 HANDLE COOKIE STRING / ARRAY
     let cookieHeader = "";
 
     if (Array.isArray(cookies)) {
@@ -54,7 +53,8 @@ async function getTasks(cookies) {
         };
       }
 
-      const list = responseData.data?.records || [];
+      // ✅ INI FIX NYA
+      const list = responseData.data?.data || [];
       total = responseData.data?.total || 0;
 
       allData = allData.concat(list);
@@ -73,6 +73,7 @@ async function getTasks(cookies) {
       total: total,
       data: allData,
     };
+
   } catch (err) {
     return {
       success: false,
