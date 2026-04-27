@@ -3,33 +3,44 @@ const router = express.Router();
 
 const { getAllTasks, sendFeedback } = require("../services/dataService");
 
-// ambil task
+// =====================
+// 📋 GET TASK
+// =====================
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
   if (!cookies) {
-    return res.status(400).json({ success: false, message: "cookies wajib" });
+    return res.status(400).json({
+      success: false,
+      message: "cookies wajib"
+    });
   }
 
   const result = await getAllTasks(cookies);
   res.json(result);
 });
 
-// 🔥 AUTO BACKGROUND (ANTI TIMEOUT)
+
+// =====================
+// 💬 AUTO FEEDBACK (BACKGROUND)
+// =====================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
 
   if (!cookies) {
-    return res.status(400).json({ success: false });
+    return res.status(400).json({
+      success: false,
+      message: "cookies wajib"
+    });
   }
 
-  // langsung balikin response dulu
+  // 🔥 langsung balikin response biar gak timeout
   res.json({
     success: true,
-    message: "Auto jalan di background"
+    message: "Auto feedback jalan di background"
   });
 
-  // 🔥 background process
+  // 🔥 proses background
   (async () => {
     console.log("🚀 mulai auto feedback...");
 
@@ -41,13 +52,17 @@ router.post("/auto", async (req, res) => {
     }
 
     const tasks = tasksResult.data;
+
     console.log("Total task:", tasks.length);
 
     for (let t of tasks) {
-      const result = await sendFeedback(cookies, t);
+      console.log("Proses task:", t.id);
 
-      console.log("feedback:", result);
+      const r = await sendFeedback(cookies, t);
 
+      console.log("Result:", r);
+
+      // delay biar aman
       await new Promise(r => setTimeout(r, 2000));
     }
 
