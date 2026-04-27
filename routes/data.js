@@ -1,71 +1,51 @@
 const express = require("express");
 const router = express.Router();
 
-const { getSession } = require("../utils/sessionStore");
 const { getAllTasks, sendFeedback } = require("../services/dataService");
 
 // =====================
-// 📋 TASKS
+// GET TASK
 // =====================
 router.post("/tasks", async (req, res) => {
-  const { token } = req.body;
+  const { cookies } = req.body;
 
-  const session = getSession(token);
-
-  if (!session) {
-    return res.status(401).json({
-      success: false,
-      message: "Session expired"
-    });
+  if (!cookies) {
+    return res.json({ success: false, message: "cookies kosong" });
   }
 
-  const result = await getAllTasks(session.cookies);
+  const result = await getAllTasks(cookies);
   res.json(result);
 });
 
 // =====================
-// 🔥 AUTO
+// AUTO FEEDBACK
 // =====================
 router.post("/auto", async (req, res) => {
-  const { token } = req.body;
+  const { cookies } = req.body;
 
-  const session = getSession(token);
-
-  if (!session) {
-    return res.status(401).json({
-      success: false,
-      message: "Session expired"
-    });
-  }
-
-  res.json({
-    success: true,
-    message: "Auto jalan di background"
-  });
+  res.json({ success: true, message: "Auto jalan..." });
 
   (async () => {
-    const tasksResult = await getAllTasks(session.cookies);
+    const tasksResult = await getAllTasks(cookies);
 
     if (!tasksResult.success) return;
 
-    const tasks = tasksResult.data;
+    let success = 0;
+    let failed = 0;
 
-    let successCount = 0;
-    let failCount = 0;
+    for (let t of tasksResult.data) {
+      const r = await sendFeedback(cookies, t);
 
-    for (let t of tasks) {
-      if (!t.id || !t.addressBo?.addressId) continue;
+      if (r.success === true || r.code === "0") success++;
+      else failed++;
 
-      const r = await sendFeedback(session.cookies, t);
+      console.log(`Task ${t.id} ->`, r.success ? "OK" : "FAIL");
 
-      if (r.success) successCount++;
-      else failCount++;
-
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 3000));
     }
 
-    console.log("✅ success:", successCount);
-    console.log("❌ fail:", failCount);
+    console.log("✅ sukses:", success);
+    console.log("❌ gagal:", failed);
   })();
 });
 
