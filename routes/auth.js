@@ -7,7 +7,7 @@ router.post("/login", async (req, res) => {
   const { account, password } = req.body;
 
   if (!account || !password) {
-    return res.status(400).json({
+    return res.json({
       success: false,
       message: "account & password wajib"
     });
