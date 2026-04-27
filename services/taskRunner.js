@@ -67,12 +67,12 @@ function getResult() {
   };
 }
 
-// 🔥 ambil hanya yang valid
 function getValidTasks() {
   return store.data
     .map(i => ({
       id: i.id,
-      addressId: i.addressBo?.addressId
+      addressId: i.addressBo?.addressId,
+      name: i.userName
     }))
     .filter(i => i.id && i.addressId);
 }
