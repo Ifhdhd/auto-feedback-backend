@@ -2,8 +2,14 @@ const express = require("express");
 const bodyParser = require("body-parser");
 
 const { login } = require("./services/loginService");
-const { getTasksRaw, getTasksValid } = require("./services/taskService");
 const { sendFeedback } = require("./services/feedbackService");
+
+const {
+  startTaskProcess,
+  getStatus,
+  getResult,
+  getValidTasks
+} = require("./services/taskRunner");
 
 const app = express();
 app.use(bodyParser.json());
@@ -26,74 +32,66 @@ app.post("/login", async (req, res) => {
 });
 
 // ======================
-// ✅ GET ALL TASKS (RAW)
+// 🚀 START AMBIL SEMUA TASK (NO TIMEOUT)
 // ======================
-app.post("/tasks", async (req, res) => {
-  try {
-    const { cookies } = req.body;
-
-    const result = await getTasksRaw(cookies);
-
-    res.json(result);
-
-  } catch (err) {
-    res.json({
-      success: false,
-      error: err.message,
-    });
-  }
+app.post("/tasks-start", async (req, res) => {
+  const { cookies } = req.body;
+  const result = await startTaskProcess(cookies);
+  res.json(result);
 });
 
 // ======================
-// ✅ AUTO FEEDBACK (VALID TASK ONLY)
+// 📊 STATUS
+// ======================
+app.get("/tasks-status", (req, res) => {
+  res.json(getStatus());
+});
+
+// ======================
+// 📦 HASIL SEMUA TASK
+// ======================
+app.get("/tasks-result", (req, res) => {
+  res.json(getResult());
+});
+
+// ======================
+// 🎯 AUTO FEEDBACK (DARI HASIL FULL)
 // ======================
 app.post("/auto-feedback", async (req, res) => {
   try {
     const { cookies } = req.body;
 
-    const taskResult = await getTasksValid(cookies);
-
-    if (!taskResult.success) {
-      return res.json(taskResult);
-    }
-
-    const tasks = taskResult.data;
+    const tasks = getValidTasks();
 
     if (tasks.length === 0) {
       return res.json({
         success: false,
-        message: "Tidak ada task valid",
+        message: "Belum ada task atau belum load",
       });
     }
 
-    let results = [];
-
-    for (let task of tasks) {
-
-      const r = await sendFeedback(cookies, task);
-
-      console.log(`✔️ Task ${task.id} dikirim`);
-
-      results.push({
-        taskId: task.id,
-        result: r,
-      });
-
-      // delay biar aman
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-
+    // 🔥 langsung respon dulu (anti timeout)
     res.json({
       success: true,
-      total: tasks.length,
-      results,
+      message: "Auto feedback dimulai",
+      total: tasks.length
     });
 
+    // 🔥 jalan di background
+    (async () => {
+      for (let task of tasks) {
+        const r = await sendFeedback(cookies, task);
+
+        console.log("✔️", task.id, r.success);
+
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      console.log("✅ AUTO FEEDBACK SELESAI");
+    })();
+
   } catch (err) {
-    res.json({
-      success: false,
-      error: err.message,
-    });
+    console.log(err.message);
   }
 });
 
