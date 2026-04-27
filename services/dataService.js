@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 // =====================
-// 📋 AMBIL TASK
+// 📋 GET ALL TASK
 // =====================
 async function getAllTasks(cookies) {
   try {
@@ -18,20 +18,8 @@ async function getAllTasks(cookies) {
         {
           headers: {
             "Cookie": cookieString,
-            "X-DESENSITIZE": "true",
-            "X-COUNTRY-ID": "1",
-            "countryCode": "ID",
-            "timeZoneId": "Asia/Jakarta",
-            "country": "ID",
-            "Accept-Language": "in-ID",
-            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-            "deviceModel": "5030U",
-            "osVersion": "10",
-            "versionCode": "300",
-            "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2"
           },
-          timeout: 15000,
           validateStatus: () => true
         }
       );
@@ -68,24 +56,16 @@ async function getAllTasks(cookies) {
 }
 
 // =====================
-// 💬 FEEDBACK (FIX TOTAL)
+// 💬 SEND FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
-    // ✅ FIX VALIDASI
-    if (!task.id || !task.addressBo || !task.addressBo.addressId) {
-      return {
-        success: false,
-        error: "task tidak valid"
-      };
-    }
-
     const cookieString = cookies.join("; ");
 
     const payload = {
       actionResultId: 166,
       actionResultSerialNo: "X0019",
-      addressId: Number(task.addressBo.addressId), // ✅ FIX UTAMA
+      addressId: task.addressBo?.addressId,
       assistTaskType: 0,
       createTime: Date.now(),
       feedbackType: "X0019",
@@ -93,7 +73,7 @@ async function sendFeedback(cookies, task) {
       ptpAmount: 0.0,
       ptpTime: 0,
       remark: "",
-      taskId: Number(task.id)
+      taskId: task.id
     };
 
     const res = await axios.post(
@@ -104,8 +84,7 @@ async function sendFeedback(cookies, task) {
           "Cookie": cookieString,
           "Content-Type": "application/json",
           "User-Agent": "okhttp/4.9.2"
-        },
-        timeout: 15000
+        }
       }
     );
 
@@ -118,7 +97,8 @@ async function sendFeedback(cookies, task) {
   } catch (err) {
     return {
       success: false,
-      error: err.response?.data || err.message
+      taskId: task.id,
+      error: err.message
     };
   }
 }
