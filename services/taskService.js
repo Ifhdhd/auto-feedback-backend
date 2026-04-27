@@ -2,15 +2,9 @@ const axios = require("axios");
 
 async function getTasks(cookies) {
   try {
-    let cookieHeader = "";
-
-    if (Array.isArray(cookies)) {
-      cookieHeader = cookies.join("; ");
-    } else if (typeof cookies === "string") {
-      cookieHeader = cookies;
-    } else {
-      throw new Error("Format cookies tidak valid");
-    }
+    let cookieHeader = typeof cookies === "string"
+      ? cookies
+      : cookies.join("; ");
 
     let allData = [];
     let page = 1;
@@ -44,33 +38,35 @@ async function getTasks(cookies) {
         }
       );
 
-      const responseData = res.data;
+      const data = res.data;
 
-      if (!responseData.success) {
-        return {
-          success: false,
-          error: responseData.message,
-        };
+      if (!data.success) {
+        return { success: false, error: data.message };
       }
 
-      // ✅ INI FIX NYA
-      const list = responseData.data?.data || [];
-      total = responseData.data?.total || 0;
+      const list = data.data?.data || [];
+      total = data.data?.total || 0;
 
-      allData = allData.concat(list);
+      // 🔥 FILTER TASK VALID
+      const mapped = list
+        .map(item => ({
+          id: item.id,
+          addressId: item.addressId,
+        }))
+        .filter(item => item.id && item.addressId);
 
-      console.log(`Page ${page} → ${list.length} data`);
+      allData = allData.concat(mapped);
 
-      if (allData.length >= total || list.length === 0) {
-        break;
-      }
+      console.log(`Page ${page} → ${mapped.length} valid`);
+
+      if (allData.length >= total || list.length === 0) break;
 
       page++;
     }
 
     return {
       success: true,
-      total: total,
+      total,
       data: allData,
     };
 
