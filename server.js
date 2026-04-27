@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 
 const { login } = require("./services/loginService");
-const { getTasks } = require("./services/taskService");
+const { getTasksRaw, getTasksValid } = require("./services/taskService");
 const { sendFeedback } = require("./services/feedbackService");
 
 const app = express();
@@ -26,29 +26,15 @@ app.post("/login", async (req, res) => {
 });
 
 // ======================
-// ✅ GET TASKS (FIX 404)
+// ✅ GET ALL TASKS (RAW)
 // ======================
 app.post("/tasks", async (req, res) => {
   try {
     const { cookies } = req.body;
 
-    const result = await getTasks(cookies);
+    const result = await getTasksRaw(cookies);
 
-    if (!result.success) {
-      return res.json(result);
-    }
-
-    const tasks = result.data.map((t, i) => ({
-      no: i + 1,
-      taskId: t.id,
-      addressId: t.addressId
-    }));
-
-    res.json({
-      success: true,
-      total: result.total,
-      tasks
-    });
+    res.json(result);
 
   } catch (err) {
     res.json({
@@ -59,13 +45,13 @@ app.post("/tasks", async (req, res) => {
 });
 
 // ======================
-// ✅ AUTO FEEDBACK
+// ✅ AUTO FEEDBACK (VALID TASK ONLY)
 // ======================
 app.post("/auto-feedback", async (req, res) => {
   try {
     const { cookies } = req.body;
 
-    const taskResult = await getTasks(cookies);
+    const taskResult = await getTasksValid(cookies);
 
     if (!taskResult.success) {
       return res.json(taskResult);
@@ -93,7 +79,7 @@ app.post("/auto-feedback", async (req, res) => {
         result: r,
       });
 
-      // 🔥 delay biar aman (2 detik)
+      // delay biar aman
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
