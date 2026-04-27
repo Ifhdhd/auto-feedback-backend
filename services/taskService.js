@@ -15,7 +15,7 @@ async function getTasks(cookies) {
         "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
         {
           params: {
-            category: 1,
+            category: 2, // 🔥 kamu pakai ini sekarang
             pageNo: page,
             orderBy: 1,
             pageSize: 20,
@@ -45,19 +45,19 @@ async function getTasks(cookies) {
       }
 
       const list = data.data?.data || [];
-      total = data.data?.total || 0;
+      total = parseInt(data.data?.total || 0);
 
-      // 🔥 FILTER TASK VALID
+      // 🔥 FIX UTAMA ADA DI SINI
       const mapped = list
         .map(item => ({
           id: item.id,
-          addressId: item.addressId,
+          addressId: item.addressBo?.addressId
         }))
         .filter(item => item.id && item.addressId);
 
       allData = allData.concat(mapped);
 
-      console.log(`Page ${page} → ${mapped.length} valid`);
+      console.log(`Page ${page} → ${mapped.length} valid task`);
 
       if (allData.length >= total || list.length === 0) break;
 
