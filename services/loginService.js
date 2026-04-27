@@ -1,6 +1,5 @@
 const axios = require("axios");
 const md5 = require("../utils/md5");
-const { createSession } = require("../utils/sessionStore");
 
 async function login(account, password) {
   try {
@@ -9,14 +8,14 @@ async function login(account, password) {
     const response = await axios.post(
       "https://ez-co-app.tin.group/app/offline/user/login",
       {
-        account: account,
+        account,
         pwd: hashedPwd,
         appVersion: "0"
       },
       {
         headers: {
           "Content-Type": "application/json; charset=UTF-8",
-          "X-COUNTRY-ID": "-1",
+          "X-COUNTRY-ID": "1",
           "countryCode": "ID",
           "timeZoneId": "Asia/Jakarta",
           "country": "ID",
@@ -32,21 +31,13 @@ async function login(account, password) {
       }
     );
 
-    const cookies = response.headers["set-cookie"];
+    const rawCookies = response.headers["set-cookie"] || [];
 
-    if (!cookies) {
-      return {
-        success: false,
-        message: "Login gagal"
-      };
-    }
-
-    // 🔥 bikin token session
-    const token = createSession(cookies);
+    const cookies = rawCookies.map(c => c.split(";")[0]);
 
     return {
       success: true,
-      token,
+      cookies,
       data: response.data
     };
 
