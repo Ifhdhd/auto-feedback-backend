@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 // =====================
-// 📋 GET ALL TASK
+// GET TASK
 // =====================
 async function getAllTasks(cookies) {
   try {
@@ -10,35 +10,27 @@ async function getAllTasks(cookies) {
     let page = 1;
     let allData = [];
     let total = 0;
-    let hasMore = true;
 
-    while (hasMore) {
-      const response = await axios.get(
+    while (true) {
+      const res = await axios.get(
         `https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=${page}&orderBy=1&pageSize=20`,
         {
           headers: {
             "Cookie": cookieString,
             "User-Agent": "okhttp/4.9.2"
-          },
-          validateStatus: () => true
+          }
         }
       );
 
-      const result = response.data;
+      const list = res.data?.data?.data || [];
+      total = res.data?.data?.total || 0;
 
-      const list = result?.data?.data || [];
-      total = result?.data?.total || 0;
+      if (list.length === 0) break;
 
-      if (list.length === 0) {
-        hasMore = false;
-      } else {
-        allData.push(...list);
-        page++;
-      }
+      allData.push(...list);
+      page++;
 
-      if (allData.length >= total) {
-        hasMore = false;
-      }
+      if (allData.length >= total) break;
     }
 
     return {
@@ -47,16 +39,16 @@ async function getAllTasks(cookies) {
       data: allData
     };
 
-  } catch (error) {
+  } catch (err) {
     return {
       success: false,
-      error: error.message
+      error: err.message
     };
   }
 }
 
 // =====================
-// 💬 SEND FEEDBACK
+// FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
@@ -70,7 +62,7 @@ async function sendFeedback(cookies, task) {
       createTime: Date.now(),
       feedbackType: "X0019",
       promise: 0,
-      ptpAmount: 0.0,
+      ptpAmount: 0,
       ptpTime: 0,
       remark: "",
       taskId: task.id
@@ -88,16 +80,11 @@ async function sendFeedback(cookies, task) {
       }
     );
 
-    return {
-      success: true,
-      taskId: task.id,
-      response: res.data
-    };
+    return res.data;
 
   } catch (err) {
     return {
       success: false,
-      taskId: task.id,
       error: err.message
     };
   }
