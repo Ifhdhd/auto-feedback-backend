@@ -1,21 +1,21 @@
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
 
 const authRoutes = require("./routes/auth");
-const dataRoutes = require("./routes/data"); // ✅ TAMBAH INI
+const dataRoutes = require("./routes/data");
 
+app.use(cors()); // 🔥 wajib biar frontend bisa akses
 app.use(express.json());
 
-// root test
 app.get("/", (req, res) => {
   res.send("Backend jalan 🚀");
 });
 
-// route
 app.use("/api", authRoutes);
-app.use("/api", dataRoutes); // ✅ TAMBAH INI
+app.use("/api", dataRoutes);
 
-// ⚠️ wajib untuk render
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
