@@ -1,30 +1,42 @@
 const axios = require("axios");
 
-const BASE_URL = "https://ez-co-app.tin.group";
+function now() {
+  return Date.now();
+}
 
-async function sendFeedback(cookie, caseId) {
+async function sendFeedback(cookies, task) {
   try {
     const res = await axios.post(
-      `${BASE_URL}/app/offline/task/case/record/saveCaseRecord`,
+      "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
       {
-        caseId: caseId,
-        actionReferId: "166",
-        actionReferDesc: "Sementara tidak ada uang",
-        actionFlagType: 2
+        actionResultId: 166,
+        actionResultSerialNo: "X0019",
+        feedbackType: "X0019",
+        addressId: task.addressId,
+        assistTaskType: 0,
+        createTime: now(),
+        promise: 0,
+        ptpAmount: 0.0,
+        ptpTime: 0,
+        remark: "",
+        taskId: task.id
       },
       {
         headers: {
-          Cookie: cookie,
           "Content-Type": "application/json",
-          "User-Agent": "okhttp/4.9.2"
-        }
+          "User-Agent": "okhttp/4.9.2",
+          "Cookie": cookies,
+        },
       }
     );
 
     return res.data;
 
   } catch (err) {
-    return { error: err.message };
+    return {
+      success: false,
+      error: err.message,
+    };
   }
 }
 
