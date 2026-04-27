@@ -30,13 +30,13 @@ async function getAllTasks(cookies) {
             "versionCode": "300",
             "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2"
-          },
-          validateStatus: () => true
+          }
         }
       );
 
       const result = response.data;
 
+      // 🔥 INI YANG BENAR (jangan diubah lagi)
       const list = result?.data?.data || [];
       total = result?.data?.total || 0;
 
@@ -69,22 +69,34 @@ async function getAllTasks(cookies) {
 // =====================
 // 💬 FEEDBACK
 // =====================
-async function sendFeedback(cookies, taskId, addressId) {
+async function sendFeedback(cookies, task) {
   try {
     const cookieString = cookies.join("; ");
 
+    // 🔥 PENTING: ambil field yang BENAR
+    const taskId = task.taskId || task.id;
+    const addressId = task.addressId;
+
+    if (!taskId || !addressId) {
+      return {
+        success: false,
+        error: "taskId / addressId tidak ada",
+        task
+      };
+    }
+
     const payload = {
-      "actionResultId": 166,
-      "actionResultSerialNo": "X0019",
-      "addressId": addressId,
-      "assistTaskType": 0,
-      "createTime": Date.now(),
-      "feedbackType": "X0019",
-      "promise": 0,
-      "ptpAmount": 0.0,
-      "ptpTime": 0,
-      "remark": "",
-      "taskId": taskId
+      actionResultId: 166,
+      actionResultSerialNo: "X0019",
+      addressId: addressId,
+      assistTaskType: 0,
+      createTime: Date.now(),
+      feedbackType: "X0019",
+      promise: 0,
+      ptpAmount: 0.0,
+      ptpTime: 0,
+      remark: "",
+      taskId: taskId
     };
 
     const res = await axios.post(
@@ -108,7 +120,6 @@ async function sendFeedback(cookies, taskId, addressId) {
   } catch (err) {
     return {
       success: false,
-      taskId,
       error: err.message
     };
   }
