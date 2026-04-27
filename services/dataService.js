@@ -31,15 +31,12 @@ async function getAllTasks(cookies) {
             "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2"
           },
-          timeout: 20000,
+          timeout: 15000,
           validateStatus: () => true
         }
       );
 
       const result = response.data;
-
-      console.log("PAGE:", page);
-      console.log("RESULT:", JSON.stringify(result));
 
       const list = result?.data?.data || [];
       total = result?.data?.total || 0;
@@ -70,18 +67,24 @@ async function getAllTasks(cookies) {
   }
 }
 
-
 // =====================
 // 💬 FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
+    if (!task.id || !task.addressId) {
+      return {
+        success: false,
+        error: "task tidak valid (id/addressId kosong)"
+      };
+    }
+
     const cookieString = cookies.join("; ");
 
     const payload = {
       actionResultId: 166,
       actionResultSerialNo: "X0019",
-      addressId: task.addressId,
+      addressId: task.addressId, // 🔥 WAJIB ADA
       assistTaskType: 0,
       createTime: Date.now(),
       feedbackType: "X0019",
@@ -89,7 +92,7 @@ async function sendFeedback(cookies, task) {
       ptpAmount: 0.0,
       ptpTime: 0,
       remark: "",
-      taskId: task.id   // 🔥 FIX PENTING
+      taskId: task.id
     };
 
     const res = await axios.post(
@@ -101,7 +104,7 @@ async function sendFeedback(cookies, task) {
           "Content-Type": "application/json",
           "User-Agent": "okhttp/4.9.2"
         },
-        timeout: 20000
+        timeout: 15000
       }
     );
 
