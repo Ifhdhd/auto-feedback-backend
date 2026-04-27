@@ -7,9 +7,8 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
 // =======================
-// 📋 AMBIL SEMUA TASK
+// 📋 GET ALL TASKS (FIX PARSING)
 // =======================
 async function getAllTasks(cookies) {
   try {
@@ -31,7 +30,10 @@ async function getAllTasks(cookies) {
         }
       );
 
-      const list = response.data?.data?.data || [];
+      const result = response.data;
+
+      // ✅ FIX UTAMA DI SINI
+      const list = result?.data?.list || [];
 
       if (list.length === 0) {
         hasMore = false;
@@ -40,8 +42,8 @@ async function getAllTasks(cookies) {
         page++;
       }
 
-      // 🔥 batas aman biar gak lama banget
-      if (page > 5) break;
+      // 🔥 batasi biar gak lama (opsional)
+      if (page > 10) break;
     }
 
     return {
@@ -58,9 +60,8 @@ async function getAllTasks(cookies) {
   }
 }
 
-
 // =======================
-// 💬 KIRIM FEEDBACK
+// 💬 SEND FEEDBACK
 // =======================
 async function sendFeedback(cookieString, task) {
   try {
@@ -78,7 +79,7 @@ async function sendFeedback(cookieString, task) {
       taskId: task.id
     };
 
-    await axios.post(
+    const res = await axios.post(
       "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
       payload,
       {
@@ -98,9 +99,8 @@ async function sendFeedback(cookieString, task) {
   }
 }
 
-
 // =======================
-// 🚀 AUTO FEEDBACK
+// 🚀 AUTO FEEDBACK (FULL AUTO)
 // =======================
 async function autoFeedback(cookies) {
   try {
@@ -118,7 +118,7 @@ async function autoFeedback(cookies) {
 
       await sendFeedback(cookieString, task);
 
-      // 🔥 delay random (anti ban)
+      // 🔥 delay random anti ban
       const delayMs = Math.floor(Math.random() * 5000) + 2000;
       console.log(`delay ${delayMs}ms`);
       await delay(delayMs);
