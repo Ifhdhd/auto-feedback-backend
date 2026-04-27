@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-const { getAllTasks, autoFeedback } = require("../services/dataService");
+const { autoFeedback, getAllTasks } = require("../services/dataService");
 
-// ======================
-// 📋 GET ALL TASKS
-// ======================
+// =======================
+// 📋 GET TASKS
+// =======================
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
@@ -27,9 +27,10 @@ router.post("/tasks", async (req, res) => {
   }
 });
 
-// ======================
-// 🚀 AUTO FEEDBACK
-// ======================
+
+// =======================
+// 🚀 AUTO FEEDBACK (ANTI TIMEOUT)
+// =======================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
 
@@ -40,15 +41,14 @@ router.post("/auto", async (req, res) => {
     });
   }
 
-  try {
-    const result = await autoFeedback(cookies);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
+  // 🔥 langsung respon (biar gak timeout)
+  res.json({
+    success: true,
+    message: "Auto feedback jalan di background 🚀"
+  });
+
+  // 🔥 proses jalan di belakang
+  autoFeedback(cookies);
 });
 
 module.exports = router;
