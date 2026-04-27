@@ -10,7 +10,7 @@ async function login(account, password) {
     const res = await axios.post(
       "https://ez-co-app.tin.group/app/offline/user/login",
       {
-        account: account,
+        account,
         pwd: md5(password),
         appVersion: "0",
       },
@@ -35,20 +35,13 @@ async function login(account, password) {
     const setCookie = res.headers["set-cookie"];
 
     const cookies = setCookie
-      ? setCookie.map((c) => c.split(";")[0]).join("; ")
+      ? setCookie.map(c => c.split(";")[0]).join("; ")
       : "";
 
-    return {
-      success: true,
-      cookies,
-      data: res.data,
-    };
+    return { success: true, cookies };
 
   } catch (err) {
-    return {
-      success: false,
-      error: err.message,
-    };
+    return { success: false, error: err.message };
   }
 }
 
