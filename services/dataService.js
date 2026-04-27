@@ -1,8 +1,16 @@
 const axios = require("axios");
 
-// ======================
+// =======================
+// ⏱️ DELAY
+// =======================
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+// =======================
 // 📋 AMBIL SEMUA TASK
-// ======================
+// =======================
 async function getAllTasks(cookies) {
   try {
     const cookieString = cookies.join("; ");
@@ -17,20 +25,9 @@ async function getAllTasks(cookies) {
         {
           headers: {
             "Cookie": cookieString,
-            "X-DESENSITIZE": "true",
-            "X-COUNTRY-ID": "1",
-            "countryCode": "ID",
-            "timeZoneId": "Asia/Jakarta",
-            "country": "ID",
-            "Accept-Language": "in-ID",
-            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-            "deviceModel": "5030U",
-            "osVersion": "10",
-            "versionCode": "300",
-            "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2"
           },
-          validateStatus: () => true
+          timeout: 15000
         }
       );
 
@@ -42,6 +39,9 @@ async function getAllTasks(cookies) {
         allData.push(...list);
         page++;
       }
+
+      // 🔥 batas aman biar gak lama banget
+      if (page > 5) break;
     }
 
     return {
@@ -58,123 +58,76 @@ async function getAllTasks(cookies) {
   }
 }
 
-// ======================
+
+// =======================
+// 💬 KIRIM FEEDBACK
+// =======================
+async function sendFeedback(cookieString, task) {
+  try {
+    const payload = {
+      actionResultId: 166,
+      actionResultSerialNo: "X0019",
+      addressId: task.addressId,
+      assistTaskType: 0,
+      createTime: Date.now(),
+      feedbackType: "X0019",
+      promise: 0,
+      ptpAmount: 0.0,
+      ptpTime: 0,
+      remark: "",
+      taskId: task.id
+    };
+
+    await axios.post(
+      "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
+      payload,
+      {
+        headers: {
+          "Cookie": cookieString,
+          "Content-Type": "application/json",
+          "User-Agent": "okhttp/4.9.2"
+        },
+        timeout: 15000
+      }
+    );
+
+    console.log("✓ sukses:", task.id);
+
+  } catch (err) {
+    console.log("✗ gagal:", task.id);
+  }
+}
+
+
+// =======================
 // 🚀 AUTO FEEDBACK
-// ======================
+// =======================
 async function autoFeedback(cookies) {
   try {
     const cookieString = cookies.join("; ");
 
-    let page = 1;
-    let allTasks = [];
-    let hasMore = true;
+    console.log("🚀 mulai auto feedback...");
 
-    // 🔥 ambil semua task
-    while (hasMore) {
-      const res = await axios.get(
-        `https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=${page}&orderBy=1&pageSize=20`,
-        {
-          headers: {
-            "Cookie": cookieString,
-            "X-COUNTRY-ID": "1",
-            "countryCode": "ID",
-            "timeZoneId": "Asia/Jakarta",
-            "country": "ID",
-            "Accept-Language": "in-ID",
-            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-            "deviceModel": "5030U",
-            "osVersion": "10",
-            "versionCode": "300",
-            "versionName": "2.7.9-release",
-            "User-Agent": "okhttp/4.9.2"
-          }
-        }
-      );
+    const result = await getAllTasks(cookies);
+    const tasks = result.data || [];
 
-      const list = res.data?.data?.data || [];
+    console.log("Total task:", tasks.length);
 
-      if (list.length === 0) {
-        hasMore = false;
-      } else {
-        allTasks.push(...list);
-        page++;
-      }
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+
+      await sendFeedback(cookieString, task);
+
+      // 🔥 delay random (anti ban)
+      const delayMs = Math.floor(Math.random() * 5000) + 2000;
+      console.log(`delay ${delayMs}ms`);
+      await delay(delayMs);
     }
 
-    console.log("Total task:", allTasks.length);
-
-    // 🔥 kirim feedback
-    let results = [];
-
-    for (let task of allTasks) {
-      try {
-        const payload = {
-          actionResultId: 166,
-          actionResultSerialNo: "X0019",
-          addressId: task.addressId,
-          assistTaskType: 0,
-          createTime: Date.now(),
-          feedbackType: "X0019",
-          promise: 0,
-          ptpAmount: 0.0,
-          ptpTime: 0,
-          remark: "",
-          taskId: task.id
-        };
-
-        const res = await axios.post(
-          "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
-          payload,
-          {
-            headers: {
-              "Cookie": cookieString,
-              "Content-Type": "application/json",
-              "X-COUNTRY-ID": "1",
-              "countryCode": "ID",
-              "timeZoneId": "Asia/Jakarta",
-              "country": "ID",
-              "Accept-Language": "in-ID",
-              "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-              "deviceModel": "5030U",
-              "osVersion": "10",
-              "versionCode": "300",
-              "versionName": "2.7.9-release",
-              "User-Agent": "okhttp/4.9.2"
-            }
-          }
-        );
-
-        results.push({
-          taskId: task.id,
-          success: res.data?.success || false
-        });
-
-        console.log(`✔ ${task.id}`);
-
-        // 🔥 delay anti spam
-        await new Promise(r => setTimeout(r, 2000));
-
-      } catch (err) {
-        console.log(`✖ ${task.id}`);
-
-        results.push({
-          taskId: task.id,
-          success: false
-        });
-      }
-    }
-
-    return {
-      success: true,
-      total: allTasks.length,
-      results
-    };
+    console.log("✅ selesai semua");
 
   } catch (err) {
-    return {
-      success: false,
-      error: err.message
-    };
+    console.log("ERROR AUTO:", err.message);
   }
 }
 
