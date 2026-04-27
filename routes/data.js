@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { autoFeedback, getAllTasks } = require("../services/dataService");
+const { getAllTasks, autoFeedback } = require("../services/dataService");
 
 // =======================
 // 📋 GET TASKS
@@ -27,9 +27,8 @@ router.post("/tasks", async (req, res) => {
   }
 });
 
-
 // =======================
-// 🚀 AUTO FEEDBACK (ANTI TIMEOUT)
+// 🚀 AUTO FEEDBACK (BACKGROUND)
 // =======================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
@@ -41,13 +40,13 @@ router.post("/auto", async (req, res) => {
     });
   }
 
-  // 🔥 langsung respon (biar gak timeout)
+  // 🔥 langsung respon biar gak timeout
   res.json({
     success: true,
     message: "Auto feedback jalan di background 🚀"
   });
 
-  // 🔥 proses jalan di belakang
+  // 🔥 jalan di belakang
   autoFeedback(cookies);
 });
 
