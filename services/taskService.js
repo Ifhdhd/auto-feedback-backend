@@ -1,6 +1,27 @@
 const axios = require("axios");
 
-async function getTasks(cookies) {
+function buildHeaders(cookieHeader) {
+  return {
+    "X-DESENSITIZE": "true",
+    "X-COUNTRY-ID": "1",
+    "countryCode": "ID",
+    "timeZoneId": "Asia/Jakarta",
+    "country": "ID",
+    "Accept-Language": "in-ID",
+    "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+    "deviceModel": "5030U",
+    "osVersion": "10",
+    "versionCode": "300",
+    "versionName": "2.7.9-release",
+    "User-Agent": "okhttp/4.9.2",
+    "Cookie": cookieHeader,
+  };
+}
+
+// ======================
+// 🔥 AMBIL SEMUA TASK (RAW)
+// ======================
+async function getTasksRaw(cookies) {
   try {
     let cookieHeader = typeof cookies === "string"
       ? cookies
@@ -19,21 +40,7 @@ async function getTasks(cookies) {
             orderBy: 1,
             pageSize: 20,
           },
-          headers: {
-            "X-DESENSITIZE": "true",
-            "X-COUNTRY-ID": "1",
-            "countryCode": "ID",
-            "timeZoneId": "Asia/Jakarta",
-            "country": "ID",
-            "Accept-Language": "in-ID",
-            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-            "deviceModel": "5030U",
-            "osVersion": "10",
-            "versionCode": "300",
-            "versionName": "2.7.9-release",
-            "User-Agent": "okhttp/4.9.2",
-            "Cookie": cookieHeader,
-          },
+          headers: buildHeaders(cookieHeader),
         }
       );
 
@@ -45,12 +52,10 @@ async function getTasks(cookies) {
 
       const list = data.data?.data || [];
 
-      // 🔥 LANGSUNG GABUNG TANPA FILTER
       allData = allData.concat(list);
 
-      console.log(`Page ${page} → ${list.length} data`);
+      console.log(`Page ${page} → ${list.length} raw`);
 
-      // ❗ STOP HANYA JIKA DATA HABIS
       if (list.length === 0) break;
 
       page++;
@@ -63,11 +68,30 @@ async function getTasks(cookies) {
     };
 
   } catch (err) {
-    return {
-      success: false,
-      error: err.message,
-    };
+    return { success: false, error: err.message };
   }
 }
 
-module.exports = { getTasks };
+// ======================
+// 🔥 AMBIL TASK VALID (UNTUK FEEDBACK)
+// ======================
+async function getTasksValid(cookies) {
+  const raw = await getTasksRaw(cookies);
+
+  if (!raw.success) return raw;
+
+  const valid = raw.data
+    .map(item => ({
+      id: item.id,
+      addressId: item.addressBo?.addressId
+    }))
+    .filter(item => item.id && item.addressId);
+
+  return {
+    success: true,
+    total: valid.length,
+    data: valid,
+  };
+}
+
+module.exports = { getTasksRaw, getTasksValid };
