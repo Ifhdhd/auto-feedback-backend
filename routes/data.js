@@ -3,80 +3,41 @@ const router = express.Router();
 
 const { getSession } = require("../store/sessionStore");
 const { getAllTasks, sendFeedback } = require("../services/dataService");
-const taskStore = require("../store/taskStore");
-const { addJob, isRunning } = require("../services/queueService");
 
-// ======================
-// GET TASKS
-// ======================
+// ambil tasks
 router.post("/tasks", async (req, res) => {
-  try {
-    const { userId } = req.body;
-
-    const cookies = getSession(userId);
-
-    if (!cookies) {
-      return res.json({ success: false, error: "belum login" });
-    }
-
-    const tasks = await getAllTasks(cookies);
-
-    taskStore.set(userId, tasks);
-
-    res.json({
-      success: true,
-      total: tasks.length
-    });
-
-  } catch (err) {
-    res.json({
-      success: false,
-      error: err.message
-    });
-  }
-});
-
-// ======================
-// RESULT
-// ======================
-router.get("/tasks/result", (req, res) => {
-  const userId = req.query.userId;
-
-  const tasks = taskStore.get(userId) || [];
-
-  res.json({
-    data: tasks,
-    total: tasks.length
-  });
-});
-
-// ======================
-// AUTO ALL (QUEUE)
-// ======================
-router.post("/auto", async (req, res) => {
   const { userId } = req.body;
 
   const cookies = getSession(userId);
-  const tasks = taskStore.get(userId) || [];
 
   if (!cookies) {
     return res.json({ success: false, error: "belum login" });
   }
 
-  if (isRunning(userId)) {
-    return res.json({ success: false, error: "masih berjalan" });
+  const result = await getAllTasks(cookies);
+
+  res.json(result);
+});
+
+// auto feedback all
+router.post("/auto", async (req, res) => {
+  const { userId } = req.body;
+
+  const cookies = getSession(userId);
+
+  if (!cookies) {
+    return res.json({ success: false, error: "belum login" });
   }
 
-  tasks.forEach(task => {
-    addJob(userId, async () => {
-      await sendFeedback(cookies, task);
-    });
-  });
+  const tasks = await getAllTasks(cookies);
 
-  res.json({
-    success: true,
-    message: "queue started"
-  });
+  if (!tasks.success) return res.json(tasks);
+
+  for (let t of tasks.data) {
+    await sendFeedback(cookies, t.id);
+  }
+
+  res.json({ success: true });
 });
 
 module.exports = router;
