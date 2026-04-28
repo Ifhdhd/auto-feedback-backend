@@ -1,51 +1,133 @@
 const express = require("express");
 const router = express.Router();
 
-const { getAllTasks, sendFeedback } = require("../services/dataService");
+const {
+  getAllTasks,
+  sendFeedback,
+  getFeedbackHistory
+} = require("../services/dataService");
+
+const { setResult, getResult } = require("../store/taskStore");
 
 // =====================
-// GET TASK
+// 📋 LOAD TASK (ASYNC)
 // =====================
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
   if (!cookies) {
-    return res.json({ success: false, message: "cookies kosong" });
+    return res.status(400).json({
+      success: false,
+      message: "cookies wajib"
+    });
   }
 
-  const result = await getAllTasks(cookies);
-  res.json(result);
+  // langsung respon (ANTI TIMEOUT)
+  res.json({
+    success: true,
+    message: "Sedang mengambil data..."
+  });
+
+  (async () => {
+    console.log("🚀 ambil task...");
+
+    const tasksResult = await getAllTasks(cookies);
+
+    if (!tasksResult.success) {
+      setResult({ success: false });
+      return;
+    }
+
+    const tasks = tasksResult.data;
+
+    let sudah = 0;
+    let belum = 0;
+    let expired = 0;
+
+    const finalData = [];
+
+    for (let t of tasks) {
+      const history = await getFeedbackHistory(cookies, t.caseId);
+
+      let status = "BELUM";
+      let sisaHari = null;
+
+      if (history.hasFeedback) {
+        if (history.sisaHari <= 0) {
+          status = "EXPIRED";
+          expired++;
+        } else {
+          status = "SUDAH";
+          sudah++;
+        }
+        sisaHari = history.sisaHari;
+      } else {
+        belum++;
+      }
+
+      finalData.push({
+        ...t,
+        feedbackStatus: status,
+        sisaHari
+      });
+    }
+
+    setResult({
+      success: true,
+      total: tasks.length,
+      summary: {
+        total: tasks.length,
+        sudahFeedback: sudah,
+        belumFeedback: belum,
+        expired
+      },
+      data: finalData
+    });
+
+    console.log("✅ selesai load data");
+  })();
 });
 
 // =====================
-// AUTO FEEDBACK
+// 📊 AMBIL HASIL
+// =====================
+router.get("/tasks/result", (req, res) => {
+  res.json(getResult());
+});
+
+// =====================
+// ⚡ AUTO FEEDBACK
 // =====================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
 
-  res.json({ success: true, message: "Auto jalan..." });
+  if (!cookies) {
+    return res.status(400).json({
+      success: false
+    });
+  }
+
+  res.json({
+    success: true,
+    message: "Auto berjalan di background"
+  });
 
   (async () => {
-    const tasksResult = await getAllTasks(cookies);
+    console.log("🚀 mulai auto...");
 
+    const tasksResult = await getAllTasks(cookies);
     if (!tasksResult.success) return;
 
-    let success = 0;
-    let failed = 0;
-
     for (let t of tasksResult.data) {
-      const r = await sendFeedback(cookies, t);
+      if (!t.id || !t.addressBo?.addressId) continue;
 
-      if (r.success === true || r.code === "0") success++;
-      else failed++;
+      console.log("➡️ proses:", t.id);
 
-      console.log(`Task ${t.id} ->`, r.success ? "OK" : "FAIL");
-
-      await new Promise(r => setTimeout(r, 3000));
+      await sendFeedback(cookies, t);
+      await new Promise(r => setTimeout(r, 1500));
     }
 
-    console.log("✅ sukses:", success);
-    console.log("❌ gagal:", failed);
+    console.log("🎉 selesai auto");
   })();
 });
 
