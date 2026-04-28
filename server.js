@@ -1,5 +1,14 @@
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
+
+// 🔥 INI YANG KURANG
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
 
 app.use(express.json());
 
@@ -7,7 +16,6 @@ app.use(express.json());
 const authRoutes = require("./routes/auth");
 app.use("/api", authRoutes);
 
-// route lain
 const dataRoutes = require("./routes/data");
 app.use("/api", dataRoutes);
 
