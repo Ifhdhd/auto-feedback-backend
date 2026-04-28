@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const sessionStore = require("../store/sessionStore");
+const getSession = require("../store/sessionStore");
 const taskStore = require("../store/taskStore");
 const queueService = require("../services/queueService");
 
