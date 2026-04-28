@@ -10,17 +10,27 @@ router.post("/login", async (req, res) => {
 
     const result = await login(account, password);
 
-    const userId = result.data.data.id;
+    const userId = result.data?.data?.id;
 
+    if (!userId) {
+      return res.json({
+        success: false,
+        error: "login gagal"
+      });
+    }
+
+    // 🔥 SIMPAN SESSION
     setSession(userId, result.cookies);
 
     res.json({
       success: true,
       userId,
-      cookies: result.cookies
+      data: result.data
     });
 
   } catch (err) {
+    console.log("LOGIN ERROR:", err.message);
+
     res.json({
       success: false,
       error: err.message
