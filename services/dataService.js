@@ -1,42 +1,28 @@
 const axios = require("axios");
 
 // =====================
-// GET TASK
+// 📋 GET TASK
 // =====================
 async function getAllTasks(cookies) {
   try {
     const cookieString = cookies.join("; ");
 
-    let page = 1;
-    let allData = [];
-    let total = 0;
+    const res = await axios.get(
+      "https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=1&pageSize=20",
+      {
+        headers: {
+          Cookie: cookieString,
+          "User-Agent": "okhttp/4.9.2"
+        },
+        timeout: 15000
+      }
+    );
 
-    while (true) {
-      const res = await axios.get(
-        `https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=${page}&orderBy=1&pageSize=20`,
-        {
-          headers: {
-            "Cookie": cookieString,
-            "User-Agent": "okhttp/4.9.2"
-          }
-        }
-      );
-
-      const list = res.data?.data?.data || [];
-      total = res.data?.data?.total || 0;
-
-      if (list.length === 0) break;
-
-      allData.push(...list);
-      page++;
-
-      if (allData.length >= total) break;
-    }
+    const data = res.data?.data?.data || [];
 
     return {
       success: true,
-      total: allData.length,
-      data: allData
+      data
     };
 
   } catch (err) {
@@ -48,46 +34,84 @@ async function getAllTasks(cookies) {
 }
 
 // =====================
-// FEEDBACK
+// 💬 SEND FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
     const cookieString = cookies.join("; ");
 
-    const payload = {
-      actionResultId: 166,
-      actionResultSerialNo: "X0019",
-      addressId: task.addressBo?.addressId,
-      assistTaskType: 0,
-      createTime: Date.now(),
-      feedbackType: "X0019",
-      promise: 0,
-      ptpAmount: 0,
-      ptpTime: 0,
-      remark: "",
-      taskId: task.id
-    };
-
-    const res = await axios.post(
+    await axios.post(
       "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
-      payload,
+      {
+        actionResultId: 166,
+        actionResultSerialNo: "X0019",
+        addressId: task.addressBo.addressId,
+        taskId: task.id
+      },
       {
         headers: {
-          "Cookie": cookieString,
-          "Content-Type": "application/json",
-          "User-Agent": "okhttp/4.9.2"
+          Cookie: cookieString,
+          "Content-Type": "application/json"
         }
       }
     );
 
-    return res.data;
+    return { success: true };
 
   } catch (err) {
-    return {
-      success: false,
-      error: err.message
-    };
+    return { success: false };
   }
 }
 
-module.exports = { getAllTasks, sendFeedback };
+// =====================
+// 📜 HISTORY
+// =====================
+async function getFeedbackHistory(cookies, caseId) {
+  try {
+    const cookieString = cookies.join("; ");
+
+    const res = await axios.post(
+      "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
+      {
+        actionType: 3,
+        pageNo: 1,
+        pageSize: 1,
+        taskId: caseId // ✅ penting
+      },
+      {
+        headers: {
+          Cookie: cookieString,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const data = res.data?.data?.data || [];
+
+    if (!data.length) {
+      return { hasFeedback: false };
+    }
+
+    const last = data[0];
+
+    const lastTime = Number(last.createTime);
+    const now = Date.now();
+
+    const diffDays = Math.floor((now - lastTime) / (1000 * 60 * 60 * 24));
+    const sisaHari = 20 - diffDays;
+
+    return {
+      hasFeedback: true,
+      sisaHari
+    };
+
+  } catch (err) {
+    return { hasFeedback: false };
+  }
+}
+
+module.exports = {
+  getAllTasks,
+  sendFeedback,
+  getFeedbackHistory
+};
