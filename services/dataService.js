@@ -1,32 +1,72 @@
 const axios = require("axios");
 
 // =====================
-// 📋 AMBIL SEMUA TASK + STATUS FEEDBACK
+// 🔧 CONFIG HEADER (BIAR GAK KOSONG)
+// =====================
+function buildHeaders(cookieString) {
+  return {
+    "Cookie": cookieString,
+    "X-DESENSITIZE": "true",
+    "X-COUNTRY-ID": "1",
+    "countryCode": "ID",
+    "timeZoneId": "Asia/Jakarta",
+    "country": "ID",
+    "Accept-Language": "in-ID",
+    "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+    "deviceModel": "5030U",
+    "osVersion": "10",
+    "versionCode": "300",
+    "versionName": "2.7.9-release",
+    "User-Agent": "okhttp/4.9.2"
+  };
+}
+
+// =====================
+// 📋 AMBIL TASK + STATUS FEEDBACK
 // =====================
 async function getAllTasks(cookies) {
   try {
+    if (!cookies || cookies.length === 0) {
+      return {
+        success: false,
+        error: "cookies kosong"
+      };
+    }
+
     const cookieString = cookies.join("; ");
+    const headers = buildHeaders(cookieString);
 
     let page = 1;
     let allData = [];
-    let total = 0;
     let hasMore = true;
 
     while (hasMore) {
       const response = await axios.get(
-        `https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=${page}&orderBy=1&pageSize=20`,
+        "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
         {
-          headers: {
-            "Cookie": cookieString,
-            "User-Agent": "okhttp/4.9.2"
-          }
+          params: {
+            category: 1,
+            pageNo: page,
+            orderBy: 1,
+            pageSize: 20
+          },
+          headers,
+          timeout: 15000,
+          validateStatus: () => true
         }
       );
 
       const result = response.data;
 
+      if (!result || result.code !== "0") {
+        return {
+          success: false,
+          error: "API gagal / cookies expired",
+          raw: result
+        };
+      }
+
       const list = result?.data?.data || [];
-      total = result?.data?.total || 0;
 
       if (list.length === 0) {
         hasMore = false;
@@ -34,41 +74,54 @@ async function getAllTasks(cookies) {
         allData.push(...list);
         page++;
       }
-
-      if (allData.length >= total) {
-        hasMore = false;
-      }
     }
 
-    // 🔥 TAMBAHAN: CEK STATUS FEEDBACK SEMUA TASK (PARALEL)
-    const enriched = await Promise.all(
-      allData.map(async (task) => {
-        if (!task.id) return task;
+    // =====================
+    // 🔥 TAMBAH STATUS FEEDBACK
+    // =====================
+    let sudahFeedback = 0;
+    let belumFeedback = 0;
+    let expired = 0;
 
-        const history = await getFeedbackHistory(cookies, task.id);
+    const finalData = [];
 
-        return {
-          ...task,
-          hasFeedback: history.hasFeedback || false,
-          sisaHari: history.sisaHari ?? null,
-          lastFeedbackTime: history.lastTime || null
-        };
-      })
-    );
+    for (let task of allData) {
+      const history = await getFeedbackHistory(cookies, task.id);
 
-    // 🔥 RINGKASAN
-    const summary = {
-      total: enriched.length,
-      sudahFeedback: enriched.filter(t => t.hasFeedback).length,
-      belumFeedback: enriched.filter(t => !t.hasFeedback).length,
-      expired: enriched.filter(t => t.hasFeedback && t.sisaHari === 0).length
-    };
+      let status = "BELUM";
+
+      if (history.hasFeedback) {
+        if (history.sisaHari <= 0) {
+          status = "EXPIRED";
+          expired++;
+        } else {
+          status = "SUDAH";
+          sudahFeedback++;
+        }
+      } else {
+        belumFeedback++;
+      }
+
+      finalData.push({
+        ...task,
+        feedbackStatus: status,
+        sisaHari: history.sisaHari ?? null
+      });
+
+      // biar gak ke-banned
+      await delay(1000);
+    }
 
     return {
       success: true,
-      total: enriched.length,
-      summary,
-      data: enriched
+      total: finalData.length,
+      summary: {
+        total: finalData.length,
+        sudahFeedback,
+        belumFeedback,
+        expired
+      },
+      data: finalData
     };
 
   } catch (error) {
@@ -79,20 +132,13 @@ async function getAllTasks(cookies) {
   }
 }
 
-
 // =====================
 // 💬 KIRIM FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
-    if (!task.id || !task.addressId) {
-      return {
-        success: false,
-        error: "task tidak valid"
-      };
-    }
-
     const cookieString = cookies.join("; ");
+    const headers = buildHeaders(cookieString);
 
     const payload = {
       actionResultId: 166,
@@ -113,10 +159,10 @@ async function sendFeedback(cookies, task) {
       payload,
       {
         headers: {
-          "Cookie": cookieString,
-          "Content-Type": "application/json",
-          "User-Agent": "okhttp/4.9.2"
-        }
+          ...headers,
+          "Content-Type": "application/json"
+        },
+        timeout: 15000
       }
     );
 
@@ -134,13 +180,13 @@ async function sendFeedback(cookies, task) {
   }
 }
 
-
 // =====================
-// 📜 HISTORY + HITUNG SISA HARI (FIXED)
+// 📜 HISTORY + HITUNG SISA HARI
 // =====================
 async function getFeedbackHistory(cookies, taskId) {
   try {
     const cookieString = cookies.join("; ");
+    const headers = buildHeaders(cookieString);
 
     const res = await axios.post(
       "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
@@ -148,14 +194,14 @@ async function getFeedbackHistory(cookies, taskId) {
         actionType: 3,
         pageNo: 1,
         pageSize: 1,
-        taskId: taskId // ✅ FIX PENTING
+        taskId: taskId // 🔥 WAJIB (ini yg tadi kurang)
       },
       {
         headers: {
-          "Cookie": cookieString,
-          "Content-Type": "application/json",
-          "User-Agent": "okhttp/4.9.2"
-        }
+          ...headers,
+          "Content-Type": "application/json"
+        },
+        timeout: 15000
       }
     );
 
@@ -164,8 +210,7 @@ async function getFeedbackHistory(cookies, taskId) {
     if (data.length === 0) {
       return {
         hasFeedback: false,
-        sisaHari: null,
-        lastTime: null
+        sisaHari: null
       };
     }
 
@@ -189,15 +234,18 @@ async function getFeedbackHistory(cookies, taskId) {
   } catch (err) {
     return {
       hasFeedback: false,
-      sisaHari: null,
       error: err.message
     };
   }
 }
 
-
 // =====================
-// EXPORT
+// ⏱️ DELAY
+// =====================
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // =====================
 module.exports = {
   getAllTasks,
