@@ -1,6 +1,14 @@
 const store = new Map();
 
+function setSession(userId, cookies) {
+  store.set(userId, cookies);
+}
+
+function getSession(userId) {
+  return store.get(userId);
+}
+
 module.exports = {
-  set: (id, data) => store.set(id, data),
-  get: (id) => store.get(id)
+  setSession,
+  getSession
 };
