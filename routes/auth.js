@@ -1,20 +1,27 @@
 const express = require("express");
 const router = express.Router();
-
 const { login } = require("../services/loginService");
 
 router.post("/login", async (req, res) => {
-  const { account, password } = req.body;
+  try {
+    const { account, password } = req.body;
 
-  if (!account || !password) {
-    return res.status(400).json({
+    const result = await login(account, password);
+
+    res.json({
+      success: true,
+      data: result.data,
+      cookies: result.cookies
+    });
+
+  } catch (err) {
+    console.log("❌ LOGIN ERROR:", err.response?.data || err.message);
+
+    res.json({
       success: false,
-      message: "account & password wajib"
+      error: err.response?.data || err.message
     });
   }
-
-  const result = await login(account, password);
-  res.json(result);
 });
 
 module.exports = router;
