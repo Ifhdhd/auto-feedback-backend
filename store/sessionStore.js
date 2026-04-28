@@ -1,7 +1,14 @@
-const map = new Map();
+const store = new Map();
+
+function set(userId, cookies) {
+  store.set(userId, cookies);
+}
+
+function get(userId) {
+  return store.get(userId);
+}
 
 module.exports = {
-  set: (id, cookies) => map.set(id, cookies),
-  get: (id) => map.get(id),
-  delete: (id) => map.delete(id)
+  set,
+  get
 };
