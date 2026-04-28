@@ -1,13 +1,12 @@
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
 
+app.use(cors()); // 🔥 INI WAJIB
 app.use(express.json());
 
-// routes
 app.use("/api", require("./routes/auth"));
 app.use("/api", require("./routes/data"));
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🚀 Server jalan di port", PORT);
-});
+app.listen(process.env.PORT || 3000);
