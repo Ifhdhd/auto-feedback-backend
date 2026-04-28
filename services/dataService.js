@@ -1,54 +1,52 @@
 const axios = require("axios");
 
-function headers(cookie) {
-  return {
-    Cookie: cookie,
-    "User-Agent": "okhttp/4.9.2"
-  };
+const baseHeader = (cookie) => ({
+  Cookie: cookie,
+  "User-Agent": "okhttp/4.9.2",
+  "Content-Type": "application/json"
+});
+
+async function getList(cookie) {
+  const res = await axios.get(
+    "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
+    {
+      params: { category: 1, pageNo: 1, pageSize: 20 },
+      headers: baseHeader(cookie)
+    }
+  );
+  return res.data?.data?.data || [];
 }
 
-async function getDetail(cookie, taskId) {
+async function getDetail(cookie, id) {
   const res = await axios.get(
     "https://ez-co-app.tin.group/app/offline/task/getTaskDetail",
     {
-      params: { taskId },
-      headers: headers(cookie)
+      params: { taskId: id },
+      headers: baseHeader(cookie)
     }
   );
-
   return res.data?.data;
 }
 
-async function getHistory(cookie, taskId) {
+async function getHistory(cookie, id) {
   const res = await axios.post(
     "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
     {
       actionType: 3,
       pageNo: 1,
       pageSize: 1,
-      taskId
+      taskId: id
     },
-    {
-      headers: headers(cookie)
-    }
+    { headers: baseHeader(cookie) }
   );
 
   return res.data?.data?.data || [];
 }
 
-// 🔥 PARALLEL ENGINE
 async function getAllTasks(cookies, onProgress) {
   const cookie = cookies.join("; ");
 
-  const res = await axios.get(
-    "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
-    {
-      params: { category: 1, pageNo: 1, pageSize: 20 },
-      headers: headers(cookie)
-    }
-  );
-
-  const list = res.data?.data?.data || [];
+  const list = await getList(cookie);
 
   await Promise.all(
     list.map(async (t) => {
@@ -58,21 +56,20 @@ async function getAllTasks(cookies, onProgress) {
           getHistory(cookie, t.id)
         ]);
 
-        t.photo = detail?.userInfoBo?.handHoldPhoto || null;
+        t.photo = detail?.userInfoBo?.handHoldPhoto || "";
+        t.name = detail?.userInfoBo?.userName || "-";
 
         if (history.length) {
           const last = Number(history[0].createTime);
           const diff = Math.floor((Date.now() - last) / 86400000);
-          t.sisaHari = 20 - diff;
+          t.sisa = 20 - diff;
         } else {
-          t.sisaHari = 20;
+          t.sisa = 20;
         }
 
-        if (onProgress) onProgress();
+        onProgress && onProgress();
 
-      } catch (e) {
-        console.log("DETAIL ERROR", e.message);
-      }
+      } catch {}
     })
   );
 
@@ -85,10 +82,8 @@ async function sendFeedback(cookies, task) {
   await axios.post(
     "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
     { taskId: task.id },
-    { headers: headers(cookie) }
+    { headers: baseHeader(cookie) }
   );
-
-  return { success: true };
 }
 
 module.exports = { getAllTasks, sendFeedback };
