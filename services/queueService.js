@@ -1,20 +1,33 @@
-const queues = {};
+const queues = new Map();
 
 function add(userId, job) {
-  if (!queues[userId]) queues[userId] = [];
+  if (!queues.has(userId)) {
+    queues.set(userId, []);
+  }
 
-  queues[userId].push(job);
+  const queue = queues.get(userId);
+  queue.push(job);
 
-  if (queues[userId].length === 1) run(userId);
+  if (queue.length === 1) run(userId);
 }
 
 async function run(userId) {
-  const queue = queues[userId];
+  const queue = queues.get(userId);
 
-  while (queue.length) {
-    const job = queue[0];
+  if (!queue || queue.length === 0) return;
+
+  const job = queue[0];
+
+  try {
     await job();
-    queue.shift();
+  } catch (e) {
+    console.log("QUEUE ERROR:", e.message);
+  }
+
+  queue.shift();
+
+  if (queue.length > 0) {
+    run(userId);
   }
 }
 
