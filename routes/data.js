@@ -4,32 +4,43 @@ const router = express.Router();
 const { getSession } = require("../store/sessionStore");
 const taskStore = require("../store/taskStore");
 
-const { getAllTasks, sendFeedback } = require("../services/dataService");
+const {
+  getAllTasks,
+  sendFeedback
+} = require("../services/dataService");
 
 
 // ======================
-// AMBIL TASK (BACKGROUND)
+// AMBIL TASK (ANTI TIMEOUT)
 // ======================
 router.post("/tasks", async (req, res) => {
-  const { userId } = req.body;
+  try {
+    const { userId } = req.body;
 
-  const cookies = getSession(userId);
+    const cookies = getSession(userId);
 
-  if (!cookies) {
-    return res.json({ success: false, error: "belum login" });
-  }
+    if (!cookies) {
+      return res.json({
+        success: false,
+        error: "belum login"
+      });
+    }
 
-  // 🚀 langsung respon
-  res.json({
-    success: true,
-    message: "ambil data dimulai"
-  });
+    // langsung respon
+    res.json({
+      success: true,
+      message: "proses ambil data"
+    });
 
-  // 🔥 proses di belakang
-  const result = await getAllTasks(cookies);
+    // background process
+    const result = await getAllTasks(cookies);
 
-  if (result.success) {
-    taskStore.set(userId, result.data);
+    if (result.success) {
+      taskStore.set(userId, result.data);
+    }
+
+  } catch (err) {
+    console.log("TASK ERROR:", err.message);
   }
 });
 
@@ -40,7 +51,7 @@ router.post("/tasks", async (req, res) => {
 router.get("/tasks/result", (req, res) => {
   const { userId } = req.query;
 
-  const data = taskStore.get(userId) || [];
+  const data = taskStore.get(userId);
 
   res.json({
     success: true,
@@ -51,19 +62,37 @@ router.get("/tasks/result", (req, res) => {
 
 
 // ======================
-// AUTO
+// AUTO FEEDBACK
 // ======================
 router.post("/auto", async (req, res) => {
-  const { userId } = req.body;
+  try {
+    const { userId } = req.body;
 
-  const cookies = getSession(userId);
-  const tasks = taskStore.get(userId) || [];
+    const cookies = getSession(userId);
+    const tasks = taskStore.get(userId);
 
-  for (let t of tasks) {
-    await sendFeedback(cookies, t);
+    if (!cookies) {
+      return res.json({
+        success: false,
+        error: "belum login"
+      });
+    }
+
+    for (let t of tasks) {
+      await sendFeedback(cookies, t);
+    }
+
+    res.json({
+      success: true,
+      message: "auto selesai"
+    });
+
+  } catch (err) {
+    res.json({
+      success: false,
+      error: err.message
+    });
   }
-
-  res.json({ success: true });
 });
 
 module.exports = router;
