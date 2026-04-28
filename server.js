@@ -3,9 +3,11 @@ const app = express();
 
 app.use(express.json());
 
-const auth = require("./routes/auth");
-app.use("/api", auth);
+// routes
+app.use("/api", require("./routes/auth"));
+app.use("/api", require("./routes/data"));
 
-app.listen(3000, () => {
-  console.log("jalan");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("🚀 Server jalan di port", PORT);
 });
