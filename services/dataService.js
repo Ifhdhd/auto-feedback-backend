@@ -18,21 +18,8 @@ async function getAllTasks(cookies) {
         {
           headers: {
             "Cookie": cookieString,
-            "X-DESENSITIZE": "true",
-            "X-COUNTRY-ID": "1",
-            "countryCode": "ID",
-            "timeZoneId": "Asia/Jakarta",
-            "country": "ID",
-            "Accept-Language": "in-ID",
-            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-            "deviceModel": "5030U",
-            "osVersion": "10",
-            "versionCode": "300",
-            "versionName": "2.7.9-release",
             "User-Agent": "okhttp/4.9.2"
-          },
-          timeout: 15000,
-          validateStatus: () => true
+          }
         }
       );
 
@@ -68,24 +55,16 @@ async function getAllTasks(cookies) {
 }
 
 // =====================
-// 💬 FEEDBACK (FIX TOTAL)
+// 💬 FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
-    // ✅ FIX VALIDASI
-    if (!task.id || !task.addressBo || !task.addressBo.addressId) {
-      return {
-        success: false,
-        error: "task tidak valid"
-      };
-    }
-
     const cookieString = cookies.join("; ");
 
     const payload = {
       actionResultId: 166,
       actionResultSerialNo: "X0019",
-      addressId: Number(task.addressBo.addressId), // ✅ FIX UTAMA
+      addressId: task.addressId,
       assistTaskType: 0,
       createTime: Date.now(),
       feedbackType: "X0019",
@@ -93,7 +72,7 @@ async function sendFeedback(cookies, task) {
       ptpAmount: 0.0,
       ptpTime: 0,
       remark: "",
-      taskId: Number(task.id)
+      taskId: task.id
     };
 
     const res = await axios.post(
@@ -104,8 +83,7 @@ async function sendFeedback(cookies, task) {
           "Cookie": cookieString,
           "Content-Type": "application/json",
           "User-Agent": "okhttp/4.9.2"
-        },
-        timeout: 15000
+        }
       }
     );
 
@@ -118,9 +96,68 @@ async function sendFeedback(cookies, task) {
   } catch (err) {
     return {
       success: false,
-      error: err.response?.data || err.message
+      error: err.message
     };
   }
 }
 
-module.exports = { getAllTasks, sendFeedback };
+// =====================
+// 📜 HISTORY + HITUNG SISA HARI
+// =====================
+async function getFeedbackHistory(cookies, taskId) {
+  try {
+    const cookieString = cookies.join("; ");
+
+    const res = await axios.post(
+      "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
+      {
+        actionType: 3,
+        pageNo: 1,
+        pageSize: 1
+      },
+      {
+        headers: {
+          "Cookie": cookieString,
+          "Content-Type": "application/json",
+          "User-Agent": "okhttp/4.9.2"
+        }
+      }
+    );
+
+    const data = res.data?.data?.data || [];
+
+    if (data.length === 0) {
+      return {
+        hasFeedback: false,
+        sisaHari: null
+      };
+    }
+
+    const last = data[0];
+
+    const lastTime = Number(last.createTime);
+    const now = Date.now();
+
+    const diffDays = Math.floor((now - lastTime) / (1000 * 60 * 60 * 24));
+
+    const sisa = 20 - diffDays;
+
+    return {
+      hasFeedback: true,
+      lastTime,
+      sisaHari: sisa > 0 ? sisa : 0
+    };
+
+  } catch (err) {
+    return {
+      hasFeedback: false,
+      error: err.message
+    };
+  }
+}
+
+module.exports = { 
+  getAllTasks, 
+  sendFeedback,
+  getFeedbackHistory // ✅ INI DITAMBAHKAN DI SINI
+};
