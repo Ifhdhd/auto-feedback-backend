@@ -1,129 +1,69 @@
 const express = require("express");
 const router = express.Router();
 
-// ✅ WAJIB INI
 const { getSession } = require("../store/sessionStore");
-
 const taskStore = require("../store/taskStore");
-const queueService = require("../services/queueService");
 
-const {
-  getAllTasks,
-  sendFeedback
-} = require("../services/dataService");
+const { getAllTasks, sendFeedback } = require("../services/dataService");
 
 
 // ======================
-// 📋 AMBIL TASK
+// AMBIL TASK (BACKGROUND)
 // ======================
 router.post("/tasks", async (req, res) => {
-  try {
-    const { userId } = req.body;
+  const { userId } = req.body;
 
-    if (!userId) {
-      return res.json({
-        success: false,
-        error: "userId kosong"
-      });
-    }
+  const cookies = getSession(userId);
 
-    // ✅ FIX DISINI
-    const cookies = getSession(userId);
+  if (!cookies) {
+    return res.json({ success: false, error: "belum login" });
+  }
 
-    if (!cookies) {
-      return res.json({
-        success: false,
-        error: "belum login"
-      });
-    }
+  // 🚀 langsung respon
+  res.json({
+    success: true,
+    message: "ambil data dimulai"
+  });
 
-    const result = await getAllTasks(cookies);
+  // 🔥 proses di belakang
+  const result = await getAllTasks(cookies);
 
-    if (!result.success) {
-      return res.json(result);
-    }
-
+  if (result.success) {
     taskStore.set(userId, result.data);
-
-    res.json({
-      success: true,
-      total: result.total,
-      data: result.data
-    });
-
-  } catch (err) {
-    console.log("❌ TASK ERROR:", err.message);
-
-    res.json({
-      success: false,
-      error: err.message
-    });
   }
 });
 
 
 // ======================
-// 📊 RESULT
+// RESULT
 // ======================
 router.get("/tasks/result", (req, res) => {
-  try {
-    const { userId } = req.query;
+  const { userId } = req.query;
 
-    const data = taskStore.get(userId) || [];
+  const data = taskStore.get(userId) || [];
 
-    res.json({
-      success: true,
-      total: data.length,
-      data
-    });
-
-  } catch (err) {
-    res.json({
-      success: false,
-      error: err.message
-    });
-  }
+  res.json({
+    success: true,
+    total: data.length,
+    data
+  });
 });
 
 
 // ======================
-// ⚡ AUTO
+// AUTO
 // ======================
-router.post("/auto", (req, res) => {
-  try {
-    const { userId } = req.body;
+router.post("/auto", async (req, res) => {
+  const { userId } = req.body;
 
-    const cookies = getSession(userId);
-    const tasks = taskStore.get(userId) || [];
+  const cookies = getSession(userId);
+  const tasks = taskStore.get(userId) || [];
 
-    if (!cookies) {
-      return res.json({
-        success: false,
-        error: "belum login"
-      });
-    }
-
-    tasks.forEach(task => {
-      queueService.add(userId, async () => {
-        const result = await sendFeedback(cookies, task);
-
-        if (result.success) {
-          task.feedbackStatus = "SUDAH";
-        }
-      });
-    });
-
-    res.json({
-      success: true,
-      message: "queue jalan"
-    });
-
-  } catch (err) {
-    res.json({
-      success: false,
-      error: err.message
-    });
+  for (let t of tasks) {
+    await sendFeedback(cookies, t);
   }
+
+  res.json({ success: true });
 });
 
 module.exports = router;
