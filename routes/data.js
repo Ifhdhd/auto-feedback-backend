@@ -1,46 +1,52 @@
-const router = require("express").Router();
+const express = require("express");
+const router = express.Router();
 
-const session = require("../store/sessionStore");
-const taskStore = require("../store/taskStore");
-const progress = require("../store/progressStore");
-
-const { getAllTasks, sendFeedback } = require("../services/dataService");
+const { getSession } = require("../store/sessionStore");
+const {
+  getTasks,
+  getTaskDetail,
+  getFeedbackExpire
+} = require("../services/dataService");
 
 router.post("/tasks", async (req, res) => {
-  const { userId } = req.body;
-  const cookies = session.get(userId);
+  try {
+    const { userId } = req.body;
 
-  if (!cookies) return res.json({ success: false });
+    const cookies = getSession(userId);
 
-  res.json({ success: true });
+    if (!cookies) {
+      return res.json({ success: false, error: "belum login" });
+    }
 
-  const list = await getAllTasks(cookies, () => {
-    progress.add(userId);
-  });
+    const result = await getTasks(cookies);
 
-  progress.init(userId, list.length);
-  taskStore.set(userId, list);
-});
+    if (!result.success) return res.json(result);
 
-router.get("/progress", (req, res) => {
-  res.json(progress.get(req.query.userId));
-});
+    const final = [];
 
-router.get("/tasks/result", (req, res) => {
-  res.json(taskStore.get(req.query.userId));
-});
+    for (let t of result.data) {
+      const photo = await getTaskDetail(cookies, t.id);
+      const expire = await getFeedbackExpire(cookies, t.id);
 
-router.post("/auto", async (req, res) => {
-  const { userId } = req.body;
+      final.push({
+        ...t,
+        photo,
+        expire
+      });
+    }
 
-  const cookies = session.get(userId);
-  const tasks = taskStore.get(userId);
+    res.json({
+      success: true,
+      total: final.length,
+      data: final
+    });
 
-  for (let t of tasks) {
-    await sendFeedback(cookies, t);
+  } catch (err) {
+    res.json({
+      success: false,
+      error: err.message
+    });
   }
-
-  res.json({ success: true });
 });
 
 module.exports = router;
