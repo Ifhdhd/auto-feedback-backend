@@ -31,15 +31,15 @@ async function login(account, password) {
       }
     );
 
-    const cookies = response.headers["set-cookie"] || [];
+    // 🔥 ambil cookie penting saja
+    const rawCookies = response.headers["set-cookie"] || [];
 
-    // 🔥 gabung jadi string
-    const cookieString = cookies.map(c => c.split(";")[0]).join("; ");
+    const cookies = rawCookies.map(c => c.split(";")[0]); // buang attribute
 
     return {
       success: true,
       data: response.data,
-      cookieString
+      cookies // ⬅️ ini yang dipakai semua request berikutnya
     };
 
   } catch (error) {
