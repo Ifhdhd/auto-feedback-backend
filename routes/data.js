@@ -1,60 +1,44 @@
-const express = require("express");
-const router = express.Router();
+const router = require("express").Router();
 
-const { getSession } = require("../store/sessionStore");
+const session = require("../store/sessionStore");
 const taskStore = require("../store/taskStore");
-const progressStore = require("../store/progressStore");
+const progress = require("../store/progressStore");
 
 const { getAllTasks, sendFeedback } = require("../services/dataService");
-const queue = require("../services/queueService");
 
-// ambil task
 router.post("/tasks", async (req, res) => {
   const { userId } = req.body;
+  const cookies = session.get(userId);
 
-  const cookies = getSession(userId);
-
-  if (!cookies) {
-    return res.json({ success: false, error: "belum login" });
-  }
+  if (!cookies) return res.json({ success: false });
 
   res.json({ success: true });
 
   const list = await getAllTasks(cookies, () => {
-    progressStore.add(userId);
+    progress.add(userId);
   });
 
-  progressStore.init(userId, list.length);
-
+  progress.init(userId, list.length);
   taskStore.set(userId, list);
 });
 
-// progress
 router.get("/progress", (req, res) => {
-  const { userId } = req.query;
-  res.json(progressStore.get(userId));
+  res.json(progress.get(req.query.userId));
 });
 
-// result
 router.get("/tasks/result", (req, res) => {
-  const { userId } = req.query;
-  res.json({
-    data: taskStore.get(userId)
-  });
+  res.json(taskStore.get(req.query.userId));
 });
 
-// auto queue
-router.post("/auto", (req, res) => {
+router.post("/auto", async (req, res) => {
   const { userId } = req.body;
 
-  const cookies = getSession(userId);
+  const cookies = session.get(userId);
   const tasks = taskStore.get(userId);
 
-  tasks.forEach(t => {
-    queue.add(userId, async () => {
-      await sendFeedback(cookies, t);
-    });
-  });
+  for (let t of tasks) {
+    await sendFeedback(cookies, t);
+  }
 
   res.json({ success: true });
 });
