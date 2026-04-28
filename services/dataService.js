@@ -1,6 +1,8 @@
 const axios = require("axios");
 
-// 🔥 COMMON HEADERS (WAJIB - biar dianggap mobile app)
+// =====================
+// 🔥 COMMON HEADERS (WAJIB)
+// =====================
 function getHeaders(cookieString) {
   return {
     "Cookie": cookieString,
@@ -21,9 +23,15 @@ function getHeaders(cookieString) {
   };
 }
 
+// =====================
+// ⏱ DELAY ANTI BAN
+// =====================
+function delay(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
 
 // =====================
-// 📋 GET TASK (FIX TOTAL)
+// 📋 GET TASK (FULL PAGINATION)
 // =====================
 async function getAllTasks(cookies) {
   try {
@@ -33,30 +41,49 @@ async function getAllTasks(cookies) {
 
     const cookieString = cookies.join("; ");
 
-    console.log("🍪 COOKIE:", cookieString);
+    let page = 1;
+    const size = 20;
+    let allData = [];
 
-    const res = await axios.get(
-      "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
-      {
-        params: {
-          category: 1,
-          pageNo: 1,
-          pageSize: 20,
-          orderBy: 1
-        },
-        headers: getHeaders(cookieString),
-        timeout: 20000
-      }
-    );
+    while (true) {
+      console.log("📄 ambil page:", page);
 
-    console.log("📦 TASK RESPONSE:", JSON.stringify(res.data, null, 2));
+      const res = await axios.get(
+        "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
+        {
+          params: {
+            category: 1,
+            pageNo: page,
+            pageSize: size,
+            orderBy: 1
+          },
+          headers: getHeaders(cookieString),
+          timeout: 20000
+        }
+      );
 
-    const list = res.data?.data?.data || [];
+      const list = res.data?.data?.data || [];
+
+      console.log(`✅ page ${page} dapat:`, list.length);
+
+      if (list.length === 0) break;
+
+      allData.push(...list);
+
+      // stop kalau last page
+      if (list.length < size) break;
+
+      page++;
+
+      await delay(300); // aman dari rate limit
+    }
+
+    console.log("🎉 TOTAL SEMUA:", allData.length);
 
     return {
       success: true,
-      total: list.length,
-      data: list
+      total: allData.length,
+      data: allData
     };
 
   } catch (err) {
@@ -68,7 +95,6 @@ async function getAllTasks(cookies) {
     };
   }
 }
-
 
 // =====================
 // 📜 HISTORY FEEDBACK
@@ -83,7 +109,7 @@ async function getFeedbackHistory(cookies, taskId) {
         actionType: 3,
         pageNo: 1,
         pageSize: 1,
-        taskId: String(taskId) // ✅ WAJIB
+        taskId: String(taskId)
       },
       {
         headers: getHeaders(cookieString),
@@ -122,7 +148,6 @@ async function getFeedbackHistory(cookies, taskId) {
     };
   }
 }
-
 
 // =====================
 // 💬 SEND FEEDBACK
