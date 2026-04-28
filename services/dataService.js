@@ -3,16 +3,15 @@ const axios = require("axios");
 // =====================
 // GET TASK
 // =====================
-async function getAllTasks(cookies) {
+async function getAllTasks(cookieString) {
   try {
-    const cookieString = cookies.join("; ");
-
     let page = 1;
     let allData = [];
     let total = 0;
+    let hasMore = true;
 
-    while (true) {
-      const res = await axios.get(
+    while (hasMore) {
+      const response = await axios.get(
         `https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=${page}&orderBy=1&pageSize=20`,
         {
           headers: {
@@ -22,8 +21,9 @@ async function getAllTasks(cookies) {
         }
       );
 
-      const list = res.data?.data?.data || [];
-      total = res.data?.data?.total || 0;
+      const result = response.data;
+      const list = result?.data?.data || [];
+      total = result?.data?.total || 0;
 
       if (list.length === 0) break;
 
@@ -50,10 +50,8 @@ async function getAllTasks(cookies) {
 // =====================
 // FEEDBACK
 // =====================
-async function sendFeedback(cookies, task) {
+async function sendFeedback(cookieString, task) {
   try {
-    const cookieString = cookies.join("; ");
-
     const payload = {
       actionResultId: 166,
       actionResultSerialNo: "X0019",
