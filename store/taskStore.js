@@ -1,16 +1,14 @@
-let result = {
-  success: false
-};
+const sessions = new Map(); // userId => cookies
 
-function setResult(data) {
-  result = data;
+function setSession(userId, cookies) {
+  sessions.set(userId, cookies);
 }
 
-function getResult() {
-  return result;
+function getSession(userId) {
+  return sessions.get(userId);
 }
 
 module.exports = {
-  setResult,
-  getResult
+  setSession,
+  getSession
 };
