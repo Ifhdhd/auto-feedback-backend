@@ -1,21 +1,10 @@
-const store = new Map();
+const map = new Map();
 
-function init(userId, total) {
-  store.set(userId, {
-    total,
-    done: 0
-  });
-}
-
-function add(userId) {
-  const p = store.get(userId);
-  if (!p) return;
-
-  p.done++;
-}
-
-function get(userId) {
-  return store.get(userId) || { total: 0, done: 0 };
-}
-
-module.exports = { init, add, get };
+module.exports = {
+  init: (id, total) => map.set(id, { total, done: 0 }),
+  add: (id) => {
+    const p = map.get(id);
+    if (p) p.done++;
+  },
+  get: (id) => map.get(id) || { total: 0, done: 0 }
+};
