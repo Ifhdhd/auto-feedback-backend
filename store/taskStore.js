@@ -1,6 +1,6 @@
-const store = new Map();
+const map = new Map();
 
 module.exports = {
-  set: (userId, data) => store.set(userId, data),
-  get: (userId) => store.get(userId) || []
+  set: (id, data) => map.set(id, data),
+  get: (id) => map.get(id) || []
 };
