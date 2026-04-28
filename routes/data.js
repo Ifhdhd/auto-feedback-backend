@@ -3,96 +3,60 @@ const router = express.Router();
 
 const { getSession } = require("../store/sessionStore");
 const taskStore = require("../store/taskStore");
+const progressStore = require("../store/progressStore");
 
-const {
-  getAllTasks,
-  sendFeedback
-} = require("../services/dataService");
+const { getAllTasks, sendFeedback } = require("../services/dataService");
+const queue = require("../services/queueService");
 
-
-// ======================
-// AMBIL TASK (ANTI TIMEOUT)
-// ======================
+// ambil task
 router.post("/tasks", async (req, res) => {
-  try {
-    const { userId } = req.body;
+  const { userId } = req.body;
 
-    const cookies = getSession(userId);
+  const cookies = getSession(userId);
 
-    if (!cookies) {
-      return res.json({
-        success: false,
-        error: "belum login"
-      });
-    }
-
-    // langsung respon
-    res.json({
-      success: true,
-      message: "proses ambil data"
-    });
-
-    // background process
-    const result = await getAllTasks(cookies);
-
-    if (result.success) {
-      taskStore.set(userId, result.data);
-    }
-
-  } catch (err) {
-    console.log("TASK ERROR:", err.message);
+  if (!cookies) {
+    return res.json({ success: false, error: "belum login" });
   }
+
+  res.json({ success: true });
+
+  const list = await getAllTasks(cookies, () => {
+    progressStore.add(userId);
+  });
+
+  progressStore.init(userId, list.length);
+
+  taskStore.set(userId, list);
 });
 
+// progress
+router.get("/progress", (req, res) => {
+  const { userId } = req.query;
+  res.json(progressStore.get(userId));
+});
 
-// ======================
-// RESULT
-// ======================
+// result
 router.get("/tasks/result", (req, res) => {
   const { userId } = req.query;
-
-  const data = taskStore.get(userId);
-
   res.json({
-    success: true,
-    total: data.length,
-    data
+    data: taskStore.get(userId)
   });
 });
 
+// auto queue
+router.post("/auto", (req, res) => {
+  const { userId } = req.body;
 
-// ======================
-// AUTO FEEDBACK
-// ======================
-router.post("/auto", async (req, res) => {
-  try {
-    const { userId } = req.body;
+  const cookies = getSession(userId);
+  const tasks = taskStore.get(userId);
 
-    const cookies = getSession(userId);
-    const tasks = taskStore.get(userId);
-
-    if (!cookies) {
-      return res.json({
-        success: false,
-        error: "belum login"
-      });
-    }
-
-    for (let t of tasks) {
+  tasks.forEach(t => {
+    queue.add(userId, async () => {
       await sendFeedback(cookies, t);
-    }
-
-    res.json({
-      success: true,
-      message: "auto selesai"
     });
+  });
 
-  } catch (err) {
-    res.json({
-      success: false,
-      error: err.message
-    });
-  }
+  res.json({ success: true });
 });
 
 module.exports = router;
