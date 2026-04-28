@@ -19,18 +19,15 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // 🔥 SIMPAN SESSION
+    // simpan cookies per user
     setSession(userId, result.cookies);
 
     res.json({
       success: true,
-      userId,
-      data: result.data
+      userId
     });
 
   } catch (err) {
-    console.log("LOGIN ERROR:", err.message);
-
     res.json({
       success: false,
       error: err.message
