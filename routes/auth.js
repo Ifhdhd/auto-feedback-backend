@@ -1,38 +1,28 @@
-const express = require("express");
-const router = express.Router();
-
+const router = require("express").Router();
 const { login } = require("../services/loginService");
-const { setSession } = require("../store/sessionStore");
+const session = require("../store/sessionStore");
 
 router.post("/login", async (req, res) => {
   try {
     const { account, password } = req.body;
 
-    const result = await login(account, password);
+    const r = await login(account, password);
+    const userId = r.data?.data?.id;
 
-    const userId = result.data?.data?.id;
+    if (!userId) return res.json({ success: false });
 
-    if (!userId) {
-      return res.json({
-        success: false,
-        error: "login gagal"
-      });
-    }
+    session.set(userId, r.cookies);
 
-    // simpan cookies per user
-    setSession(userId, result.cookies);
+    res.json({ success: true, userId });
 
-    res.json({
-      success: true,
-      userId
-    });
-
-  } catch (err) {
-    res.json({
-      success: false,
-      error: err.message
-    });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
   }
+});
+
+router.post("/logout", (req, res) => {
+  session.delete(req.body.userId);
+  res.json({ success: true });
 });
 
 module.exports = router;
