@@ -1,41 +1,21 @@
-const queues = new Map(); // userId => queue
-const running = new Map(); // userId => boolean
+const queues = {};
 
-function addJob(userId, job) {
-  if (!queues.has(userId)) {
-    queues.set(userId, []);
+function add(userId, job) {
+  if (!queues[userId]) queues[userId] = [];
+
+  queues[userId].push(job);
+
+  if (queues[userId].length === 1) run(userId);
+}
+
+async function run(userId) {
+  const queue = queues[userId];
+
+  while (queue.length) {
+    const job = queue[0];
+    await job();
+    queue.shift();
   }
-
-  queues.get(userId).push(job);
-
-  processQueue(userId);
 }
 
-async function processQueue(userId) {
-  if (running.get(userId)) return; // 🔥 anti bentrok
-
-  running.set(userId, true);
-
-  const queue = queues.get(userId);
-
-  while (queue.length > 0) {
-    const job = queue.shift();
-
-    try {
-      await job();
-    } catch (err) {
-      console.log("❌ JOB ERROR:", err.message);
-    }
-  }
-
-  running.set(userId, false);
-}
-
-function isRunning(userId) {
-  return running.get(userId) || false;
-}
-
-module.exports = {
-  addJob,
-  isRunning
-};
+module.exports = { add };
