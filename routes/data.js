@@ -3,49 +3,43 @@ const router = express.Router();
 
 const { getAllTasks, sendFeedback } = require("../services/dataService");
 
-// =====================
-// GET TASK
-// =====================
 router.post("/tasks", async (req, res) => {
   const { cookies } = req.body;
 
-  if (!cookies) {
-    return res.json({ success: false, message: "cookies kosong" });
-  }
-
   const result = await getAllTasks(cookies);
-  res.json(result);
+
+  if (!result.success) return res.json(result);
+
+  let done = 0;
+  let pending = 0;
+
+  result.data.forEach(t => {
+    if (t.status === 2) pending++;
+    else done++;
+  });
+
+  res.json({
+    success: true,
+    total: result.total,
+    done,
+    pending,
+    data: result.data
+  });
 });
 
-// =====================
-// AUTO FEEDBACK
-// =====================
 router.post("/auto", async (req, res) => {
   const { cookies } = req.body;
 
-  res.json({ success: true, message: "Auto jalan..." });
+  res.json({ success: true, message: "running..." });
 
   (async () => {
     const tasksResult = await getAllTasks(cookies);
+    const tasks = tasksResult.data;
 
-    if (!tasksResult.success) return;
-
-    let success = 0;
-    let failed = 0;
-
-    for (let t of tasksResult.data) {
-      const r = await sendFeedback(cookies, t);
-
-      if (r.success === true || r.code === "0") success++;
-      else failed++;
-
-      console.log(`Task ${t.id} ->`, r.success ? "OK" : "FAIL");
-
+    for (let t of tasks) {
+      await sendFeedback(cookies, t);
       await new Promise(r => setTimeout(r, 3000));
     }
-
-    console.log("✅ sukses:", success);
-    console.log("❌ gagal:", failed);
   })();
 });
 
