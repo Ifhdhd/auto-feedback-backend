@@ -15,7 +15,7 @@ router.post("/tasks", async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const cookies = sessionStore.get(userId);
+    const cookies = getSession(userId);
 
     if (!cookies) {
       return res.json({ success: false, error: "belum login" });
