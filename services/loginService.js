@@ -2,21 +2,18 @@ const axios = require("axios");
 const md5 = require("md5");
 
 async function login(account, password) {
-  const hashed = md5(password);
-
   const res = await axios.post(
     "https://ez-co-app.tin.group/app/offline/user/login",
     {
       account,
-      pwd: hashed,
+      pwd: md5(password),
       appVersion: "0"
     },
     {
       headers: {
-        "Content-Type": "application/json; charset=UTF-8",
+        "Content-Type": "application/json",
         "User-Agent": "okhttp/4.9.2"
-      },
-      timeout: 20000
+      }
     }
   );
 
