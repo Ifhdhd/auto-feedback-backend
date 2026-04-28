@@ -11,7 +11,7 @@ async function login(account, password) {
     },
     {
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=UTF-8",
         "User-Agent": "okhttp/4.9.2"
       }
     }
@@ -23,4 +23,4 @@ async function login(account, password) {
   };
 }
 
-module.exports = { login };
+module.exports = login; // ⚠️ PENTING (bukan object)
