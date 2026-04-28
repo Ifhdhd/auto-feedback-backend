@@ -14,27 +14,37 @@ async function login(account, password) {
       },
       {
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json; charset=UTF-8",
           "X-COUNTRY-ID": "1",
           "countryCode": "ID",
           "timeZoneId": "Asia/Jakarta",
-          "User-Agent": "okhttp/4.9.2",
-          "Cookie": "acw_tc=xxxxxxxx" // 🔥 WAJIB (isi dari browser)
+          "country": "ID",
+          "Accept-Language": "in-ID",
+          "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+          "deviceModel": "5030U",
+          "osVersion": "10",
+          "versionCode": "300",
+          "versionName": "2.7.9-release",
+          "User-Agent": "okhttp/4.9.2"
         },
         validateStatus: () => true
       }
     );
 
+    const rawCookies = response.headers["set-cookie"] || [];
+
+    const cookies = rawCookies.map(c => c.split(";")[0]);
+
     return {
       success: true,
-      data: response.data,
-      cookies: response.headers["set-cookie"] || []
+      cookies,
+      data: response.data
     };
 
-  } catch (err) {
+  } catch (error) {
     return {
       success: false,
-      error: err.message
+      error: error.message
     };
   }
 }
