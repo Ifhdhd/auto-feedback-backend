@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const getSession = require("../store/sessionStore");
+// ✅ WAJIB INI
+const { getSession } = require("../store/sessionStore");
+
 const taskStore = require("../store/taskStore");
 const queueService = require("../services/queueService");
 
@@ -10,15 +12,29 @@ const {
   sendFeedback
 } = require("../services/dataService");
 
-// ambil tasks
+
+// ======================
+// 📋 AMBIL TASK
+// ======================
 router.post("/tasks", async (req, res) => {
   try {
     const { userId } = req.body;
 
+    if (!userId) {
+      return res.json({
+        success: false,
+        error: "userId kosong"
+      });
+    }
+
+    // ✅ FIX DISINI
     const cookies = getSession(userId);
 
     if (!cookies) {
-      return res.json({ success: false, error: "belum login" });
+      return res.json({
+        success: false,
+        error: "belum login"
+      });
     }
 
     const result = await getAllTasks(cookies);
@@ -36,47 +52,78 @@ router.post("/tasks", async (req, res) => {
     });
 
   } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
+    console.log("❌ TASK ERROR:", err.message);
 
-// result
-router.get("/tasks/result", (req, res) => {
-  const { userId } = req.query;
-
-  const data = taskStore.get(userId) || [];
-
-  res.json({
-    total: data.length,
-    data
-  });
-});
-
-// auto queue
-router.post("/auto", (req, res) => {
-  const { userId } = req.body;
-
-  const cookies = sessionStore.get(userId);
-  const tasks = taskStore.get(userId) || [];
-
-  if (!cookies) {
-    return res.json({ success: false, error: "belum login" });
-  }
-
-  tasks.forEach(task => {
-    queueService.add(userId, async () => {
-      const result = await sendFeedback(cookies, task);
-
-      if (result.success) {
-        task.feedbackStatus = "SUDAH";
-      }
+    res.json({
+      success: false,
+      error: err.message
     });
-  });
+  }
+});
 
-  res.json({
-    success: true,
-    message: "queue jalan"
-  });
+
+// ======================
+// 📊 RESULT
+// ======================
+router.get("/tasks/result", (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    const data = taskStore.get(userId) || [];
+
+    res.json({
+      success: true,
+      total: data.length,
+      data
+    });
+
+  } catch (err) {
+    res.json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+
+// ======================
+// ⚡ AUTO
+// ======================
+router.post("/auto", (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const cookies = getSession(userId);
+    const tasks = taskStore.get(userId) || [];
+
+    if (!cookies) {
+      return res.json({
+        success: false,
+        error: "belum login"
+      });
+    }
+
+    tasks.forEach(task => {
+      queueService.add(userId, async () => {
+        const result = await sendFeedback(cookies, task);
+
+        if (result.success) {
+          task.feedbackStatus = "SUDAH";
+        }
+      });
+    });
+
+    res.json({
+      success: true,
+      message: "queue jalan"
+    });
+
+  } catch (err) {
+    res.json({
+      success: false,
+      error: err.message
+    });
+  }
 });
 
 module.exports = router;
