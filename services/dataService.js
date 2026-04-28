@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 // =====================
-// 📋 AMBIL TASK
+// 📋 AMBIL SEMUA TASK + STATUS FEEDBACK
 // =====================
 async function getAllTasks(cookies) {
   try {
@@ -40,10 +40,35 @@ async function getAllTasks(cookies) {
       }
     }
 
+    // 🔥 TAMBAHAN: CEK STATUS FEEDBACK SEMUA TASK (PARALEL)
+    const enriched = await Promise.all(
+      allData.map(async (task) => {
+        if (!task.id) return task;
+
+        const history = await getFeedbackHistory(cookies, task.id);
+
+        return {
+          ...task,
+          hasFeedback: history.hasFeedback || false,
+          sisaHari: history.sisaHari ?? null,
+          lastFeedbackTime: history.lastTime || null
+        };
+      })
+    );
+
+    // 🔥 RINGKASAN
+    const summary = {
+      total: enriched.length,
+      sudahFeedback: enriched.filter(t => t.hasFeedback).length,
+      belumFeedback: enriched.filter(t => !t.hasFeedback).length,
+      expired: enriched.filter(t => t.hasFeedback && t.sisaHari === 0).length
+    };
+
     return {
       success: true,
-      total: allData.length,
-      data: allData
+      total: enriched.length,
+      summary,
+      data: enriched
     };
 
   } catch (error) {
@@ -54,11 +79,19 @@ async function getAllTasks(cookies) {
   }
 }
 
+
 // =====================
-// 💬 FEEDBACK
+// 💬 KIRIM FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
+    if (!task.id || !task.addressId) {
+      return {
+        success: false,
+        error: "task tidak valid"
+      };
+    }
+
     const cookieString = cookies.join("; ");
 
     const payload = {
@@ -101,8 +134,9 @@ async function sendFeedback(cookies, task) {
   }
 }
 
+
 // =====================
-// 📜 HISTORY + HITUNG SISA HARI
+// 📜 HISTORY + HITUNG SISA HARI (FIXED)
 // =====================
 async function getFeedbackHistory(cookies, taskId) {
   try {
@@ -113,7 +147,8 @@ async function getFeedbackHistory(cookies, taskId) {
       {
         actionType: 3,
         pageNo: 1,
-        pageSize: 1
+        pageSize: 1,
+        taskId: taskId // ✅ FIX PENTING
       },
       {
         headers: {
@@ -129,7 +164,8 @@ async function getFeedbackHistory(cookies, taskId) {
     if (data.length === 0) {
       return {
         hasFeedback: false,
-        sisaHari: null
+        sisaHari: null,
+        lastTime: null
       };
     }
 
@@ -138,7 +174,9 @@ async function getFeedbackHistory(cookies, taskId) {
     const lastTime = Number(last.createTime);
     const now = Date.now();
 
-    const diffDays = Math.floor((now - lastTime) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(
+      (now - lastTime) / (1000 * 60 * 60 * 24)
+    );
 
     const sisa = 20 - diffDays;
 
@@ -151,13 +189,18 @@ async function getFeedbackHistory(cookies, taskId) {
   } catch (err) {
     return {
       hasFeedback: false,
+      sisaHari: null,
       error: err.message
     };
   }
 }
 
-module.exports = { 
-  getAllTasks, 
+
+// =====================
+// EXPORT
+// =====================
+module.exports = {
+  getAllTasks,
   sendFeedback,
-  getFeedbackHistory // ✅ INI DITAMBAHKAN DI SINI
+  getFeedbackHistory
 };
