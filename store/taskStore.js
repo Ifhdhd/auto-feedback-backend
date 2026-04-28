@@ -1,14 +1,11 @@
-const sessions = new Map(); // userId => cookies
+const store = new Map(); // userId => tasks
 
-function setSession(userId, cookies) {
-  sessions.set(userId, cookies);
+function set(userId, tasks) {
+  store.set(userId, tasks);
 }
 
-function getSession(userId) {
-  return sessions.get(userId);
+function get(userId) {
+  return store.get(userId);
 }
 
-module.exports = {
-  setSession,
-  getSession
-};
+module.exports = { set, get };
