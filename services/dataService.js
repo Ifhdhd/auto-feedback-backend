@@ -1,22 +1,55 @@
 const axios = require("axios");
 
+// 🔥 COMMON HEADERS (WAJIB - biar dianggap mobile app)
+function getHeaders(cookieString) {
+  return {
+    "Cookie": cookieString,
+    "Content-Type": "application/json; charset=UTF-8",
+    "User-Agent": "okhttp/4.9.2",
+
+    "X-COUNTRY-ID": "1",
+    "countryCode": "ID",
+    "timeZoneId": "Asia/Jakarta",
+    "country": "ID",
+    "Accept-Language": "in-ID",
+
+    "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+    "deviceModel": "5030U",
+    "osVersion": "10",
+    "versionCode": "300",
+    "versionName": "2.7.9-release"
+  };
+}
+
+
 // =====================
-// 📋 AMBIL TASK (ANTI TIMEOUT)
+// 📋 GET TASK (FIX TOTAL)
 // =====================
 async function getAllTasks(cookies) {
   try {
+    if (!Array.isArray(cookies)) {
+      throw new Error("cookies harus array");
+    }
+
     const cookieString = cookies.join("; ");
 
+    console.log("🍪 COOKIE:", cookieString);
+
     const res = await axios.get(
-      "https://ez-co-app.tin.group/app/offline/task/queryTaskList?category=1&pageNo=1&pageSize=20&orderBy=1",
+      "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
       {
-        headers: {
-          "Cookie": cookieString,
-          "User-Agent": "okhttp/4.9.2"
+        params: {
+          category: 1,
+          pageNo: 1,
+          pageSize: 20,
+          orderBy: 1
         },
-        timeout: 15000 // ✅ biar gak ngegantung
+        headers: getHeaders(cookieString),
+        timeout: 20000
       }
     );
+
+    console.log("📦 TASK RESPONSE:", JSON.stringify(res.data, null, 2));
 
     const list = res.data?.data?.data || [];
 
@@ -27,6 +60,8 @@ async function getAllTasks(cookies) {
     };
 
   } catch (err) {
+    console.log("❌ ERROR GET TASK:", err.message);
+
     return {
       success: false,
       error: err.message
@@ -36,7 +71,7 @@ async function getAllTasks(cookies) {
 
 
 // =====================
-// 📜 HISTORY (WAJIB TASK ID)
+// 📜 HISTORY FEEDBACK
 // =====================
 async function getFeedbackHistory(cookies, taskId) {
   try {
@@ -48,14 +83,10 @@ async function getFeedbackHistory(cookies, taskId) {
         actionType: 3,
         pageNo: 1,
         pageSize: 1,
-        taskId: String(taskId) // ✅ FIX
+        taskId: String(taskId) // ✅ WAJIB
       },
       {
-        headers: {
-          "Cookie": cookieString,
-          "Content-Type": "application/json",
-          "User-Agent": "okhttp/4.9.2"
-        },
+        headers: getHeaders(cookieString),
         timeout: 15000
       }
     );
@@ -83,6 +114,8 @@ async function getFeedbackHistory(cookies, taskId) {
     };
 
   } catch (err) {
+    console.log("❌ ERROR HISTORY:", err.message);
+
     return {
       hasFeedback: false,
       error: err.message
@@ -92,11 +125,15 @@ async function getFeedbackHistory(cookies, taskId) {
 
 
 // =====================
-// 💬 AUTO FEEDBACK
+// 💬 SEND FEEDBACK
 // =====================
 async function sendFeedback(cookies, task) {
   try {
     const cookieString = cookies.join("; ");
+
+    if (!task.addressBo?.addressId) {
+      return { success: false, error: "addressId tidak ada" };
+    }
 
     const payload = {
       actionResultId: 166,
@@ -116,11 +153,7 @@ async function sendFeedback(cookies, task) {
       "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
       payload,
       {
-        headers: {
-          "Cookie": cookieString,
-          "Content-Type": "application/json",
-          "User-Agent": "okhttp/4.9.2"
-        },
+        headers: getHeaders(cookieString),
         timeout: 15000
       }
     );
@@ -131,6 +164,8 @@ async function sendFeedback(cookies, task) {
     };
 
   } catch (err) {
+    console.log("❌ ERROR FEEDBACK:", err.message);
+
     return {
       success: false,
       error: err.message
