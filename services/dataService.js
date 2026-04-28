@@ -1,89 +1,107 @@
 const axios = require("axios");
 
-const baseHeader = (cookie) => ({
-  Cookie: cookie,
-  "User-Agent": "okhttp/4.9.2",
-  "Content-Type": "application/json"
-});
+function getHeaders(cookieString) {
+  return {
+    "Cookie": cookieString,
+    "Content-Type": "application/json; charset=UTF-8",
+    "User-Agent": "okhttp/4.9.2",
 
-async function getList(cookie) {
-  const res = await axios.get(
-    "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
-    {
-      params: { category: 1, pageNo: 1, pageSize: 20 },
-      headers: baseHeader(cookie)
-    }
-  );
-  return res.data?.data?.data || [];
+    "X-COUNTRY-ID": "1",
+    "countryCode": "ID",
+    "timeZoneId": "Asia/Jakarta",
+    "country": "ID",
+    "Accept-Language": "in-ID",
+
+    "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+    "deviceModel": "5030U",
+    "osVersion": "10",
+    "versionCode": "300",
+    "versionName": "2.7.9-release"
+  };
 }
 
-async function getDetail(cookie, id) {
-  const res = await axios.get(
-    "https://ez-co-app.tin.group/app/offline/task/getTaskDetail",
-    {
-      params: { taskId: id },
-      headers: baseHeader(cookie)
-    }
-  );
-  return res.data?.data;
+async function getTasks(cookies) {
+  try {
+    const cookieString = cookies.join("; ");
+
+    const res = await axios.get(
+      "https://ez-co-app.tin.group/app/offline/task/queryTaskList",
+      {
+        params: {
+          category: 1,
+          pageNo: 1,
+          pageSize: 20
+        },
+        headers: getHeaders(cookieString),
+        timeout: 20000
+      }
+    );
+
+    return {
+      success: true,
+      data: res.data?.data?.data || []
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      error: err.message
+    };
+  }
 }
 
-async function getHistory(cookie, id) {
-  const res = await axios.post(
-    "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
-    {
-      actionType: 3,
-      pageNo: 1,
-      pageSize: 1,
-      taskId: id
-    },
-    { headers: baseHeader(cookie) }
-  );
+async function getTaskDetail(cookies, taskId) {
+  try {
+    const cookieString = cookies.join("; ");
 
-  return res.data?.data?.data || [];
+    const res = await axios.get(
+      "https://ez-co-app.tin.group/app/offline/task/getTaskDetail",
+      {
+        params: { taskId },
+        headers: getHeaders(cookieString)
+      }
+    );
+
+    return res.data?.data?.userInfoBo?.handHoldPhoto || null;
+
+  } catch {
+    return null;
+  }
 }
 
-async function getAllTasks(cookies, onProgress) {
-  const cookie = cookies.join("; ");
+async function getFeedbackExpire(cookies, taskId) {
+  try {
+    const cookieString = cookies.join("; ");
 
-  const list = await getList(cookie);
+    const res = await axios.post(
+      "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
+      {
+        actionType: 3,
+        pageNo: 1,
+        pageSize: 1,
+        taskId: String(taskId)
+      },
+      {
+        headers: getHeaders(cookieString)
+      }
+    );
 
-  await Promise.all(
-    list.map(async (t) => {
-      try {
-        const [detail, history] = await Promise.all([
-          getDetail(cookie, t.id),
-          getHistory(cookie, t.id)
-        ]);
+    const list = res.data?.data?.data || [];
 
-        t.photo = detail?.userInfoBo?.handHoldPhoto || "";
-        t.name = detail?.userInfoBo?.userName || "-";
+    if (list.length === 0) return 0;
 
-        if (history.length) {
-          const last = Number(history[0].createTime);
-          const diff = Math.floor((Date.now() - last) / 86400000);
-          t.sisa = 20 - diff;
-        } else {
-          t.sisa = 20;
-        }
+    const last = Number(list[0].createTime);
+    const diff = Math.floor((Date.now() - last) / (1000 * 60 * 60 * 24));
 
-        onProgress && onProgress();
+    return 20 - diff;
 
-      } catch {}
-    })
-  );
-
-  return list;
+  } catch {
+    return 0;
+  }
 }
 
-async function sendFeedback(cookies, task) {
-  const cookie = cookies.join("; ");
-
-  await axios.post(
-    "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
-    { taskId: task.id },
-    { headers: baseHeader(cookie) }
-  );
-}
-
-module.exports = { getAllTasks, sendFeedback };
+module.exports = {
+  getTasks,
+  getTaskDetail,
+  getFeedbackExpire
+};
