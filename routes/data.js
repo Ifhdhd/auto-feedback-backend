@@ -2,11 +2,57 @@ const express = require("express");
 const router = express.Router();
 
 const { getSession } = require("../store/sessionStore");
-const { addJob, isRunning } = require("../services/queueService");
-const { sendFeedback } = require("../services/dataService");
+const { getTasks, sendFeedback } = require("../services/dataService");
 const taskStore = require("../store/taskStore");
+const { addJob, isRunning } = require("../services/queueService");
 
-// AUTO ALL
+// ======================
+// GET TASKS
+// ======================
+router.post("/tasks", async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const cookies = getSession(userId);
+
+    if (!cookies) {
+      return res.json({ success: false, error: "belum login" });
+    }
+
+    const tasks = await getTasks(cookies);
+
+    taskStore.set(userId, tasks);
+
+    res.json({
+      success: true,
+      total: tasks.length
+    });
+
+  } catch (err) {
+    res.json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// ======================
+// RESULT
+// ======================
+router.get("/tasks/result", (req, res) => {
+  const userId = req.query.userId;
+
+  const tasks = taskStore.get(userId) || [];
+
+  res.json({
+    data: tasks,
+    total: tasks.length
+  });
+});
+
+// ======================
+// AUTO ALL (QUEUE)
+// ======================
 router.post("/auto", async (req, res) => {
   const { userId } = req.body;
 
@@ -21,18 +67,9 @@ router.post("/auto", async (req, res) => {
     return res.json({ success: false, error: "masih berjalan" });
   }
 
-  let success = 0;
-  let fail = 0;
-
   tasks.forEach(task => {
     addJob(userId, async () => {
-      const result = await sendFeedback(cookies, task);
-
-      if (result.success) {
-        success++;
-      } else {
-        fail++;
-      }
+      await sendFeedback(cookies, task);
     });
   });
 
