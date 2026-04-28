@@ -40,4 +40,4 @@ async function login(account, password) {
   };
 }
 
-module.exports = { login };
+module.exports = { loginService };
