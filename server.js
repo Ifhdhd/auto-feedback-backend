@@ -3,7 +3,7 @@ const session = require("express-session");
 const cors = require("cors");
 const axios = require("axios");
 
-const { getAllTasks, sendFeedback } = require("./service/dataService");
+const { getAllTasks, sendFeedback } = require("./services/dataService");
 
 const app = express();
 
