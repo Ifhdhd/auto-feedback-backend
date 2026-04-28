@@ -29,11 +29,9 @@ async function login(account, password) {
     }
   );
 
-  const cookies = response.headers["set-cookie"] || [];
-
   return {
     data: response.data,
-    cookies
+    cookies: response.headers["set-cookie"] || []
   };
 }
 
