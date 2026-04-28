@@ -8,7 +8,4 @@ function getSession(userId) {
   return store.get(userId);
 }
 
-module.exports = {
-  setSession,
-  getSession
-};
+module.exports = { setSession, getSession };
