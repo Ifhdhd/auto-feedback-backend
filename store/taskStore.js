@@ -1,11 +1,10 @@
-const store = new Map(); // userId => tasks
+const store = {};
 
-function set(userId, tasks) {
-  store.set(userId, tasks);
-}
-
-function get(userId) {
-  return store.get(userId);
-}
-
-module.exports = { set, get };
+module.exports = {
+  set: (userId, tasks) => {
+    store[userId] = tasks;
+  },
+  get: (userId) => {
+    return store[userId];
+  }
+};
