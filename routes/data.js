@@ -2,51 +2,53 @@ const express = require("express");
 const router = express.Router();
 
 const { getSession } = require("../store/sessionStore");
-const {
-  getTasks,
-  getTaskDetail,
-  getFeedbackExpire
-} = require("../services/dataService");
+const { getTasks, getExpire, sendFeedback } = require("../services/dataService");
 
-router.post("/tasks", async (req, res) => {
-  try {
-    const { userId } = req.body;
+// 🔥 GET TASK
+router.post("/tasks", async (req,res)=>{
+  const { userId } = req.body;
+  const cookies = getSession(userId);
 
-    const cookies = getSession(userId);
+  if(!cookies) return res.json({ success:false, error:"belum login" });
 
-    if (!cookies) {
-      return res.json({ success: false, error: "belum login" });
-    }
+  const result = await getTasks(cookies);
+  if(!result.success) return res.json(result);
 
-    const result = await getTasks(cookies);
+  const final = [];
 
-    if (!result.success) return res.json(result);
+  for(let t of result.data){
+    const expire = await getExpire(cookies, t.id);
 
-    const final = [];
-
-    for (let t of result.data) {
-      const photo = await getTaskDetail(cookies, t.id);
-      const expire = await getFeedbackExpire(cookies, t.id);
-
-      final.push({
-        ...t,
-        photo,
-        expire
-      });
-    }
-
-    res.json({
-      success: true,
-      total: final.length,
-      data: final
-    });
-
-  } catch (err) {
-    res.json({
-      success: false,
-      error: err.message
+    final.push({
+      ...t,
+      expire
     });
   }
+
+  res.json({
+    success:true,
+    total:final.length,
+    data:final
+  });
+});
+
+// 🔥 AUTO ALL
+router.post("/auto", async (req,res)=>{
+  const { userId } = req.body;
+  const cookies = getSession(userId);
+
+  if(!cookies) return res.json({ success:false });
+
+  const result = await getTasks(cookies);
+
+  let success=0, fail=0;
+
+  for(let t of result.data){
+    const r = await sendFeedback(cookies,t);
+    r.success ? success++ : fail++;
+  }
+
+  res.json({ success:true, successCount:success, failCount:fail });
 });
 
 module.exports = router;
