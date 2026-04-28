@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { getSession } = require("../store/sessionStore");
-const { getTasks, sendFeedback } = require("../services/dataService");
+const { getAllTasks, sendFeedback } = require("../services/dataService");
 const taskStore = require("../store/taskStore");
 const { addJob, isRunning } = require("../services/queueService");
 
@@ -19,7 +19,7 @@ router.post("/tasks", async (req, res) => {
       return res.json({ success: false, error: "belum login" });
     }
 
-    const tasks = await getTasks(cookies);
+    const tasks = await getAllTasks(cookies);
 
     taskStore.set(userId, tasks);
 
