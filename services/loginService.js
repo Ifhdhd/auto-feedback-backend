@@ -23,4 +23,4 @@ async function login(account, password) {
   };
 }
 
-module.exports = login; // ⚠️ PENTING (bukan object)
+module.exports = loginService; // ⚠️ PENTING (bukan object)
