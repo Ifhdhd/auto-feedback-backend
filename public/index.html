@@ -2,44 +2,106 @@
 <html>
 <head>
   <title>Auto Feedback</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      font-family: Arial;
+      padding: 15px;
+      background: #f5f5f5;
+    }
+
+    input, button, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+    }
+
+    .card {
+      background: white;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .overdue {
+      background: #ffcccc;
+    }
+
+    .safe {
+      background: #ccffcc;
+    }
+
+    #log {
+      font-size: 12px;
+      max-height: 200px;
+      overflow: auto;
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+    }
+  </style>
 </head>
+
 <body>
 
 <h2>Login</h2>
 <input id="account" placeholder="No HP">
-<input id="password" placeholder="Password" type="password">
+<input id="password" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 
-<h2>Tasks</h2>
+<h2>Task</h2>
+
+<select id="filter" onchange="loadTasks()">
+  <option value="all">Semua</option>
+  <option value="overdue">Overdue</option>
+</select>
+
 <button onclick="loadTasks()">Load Tasks</button>
+
 <div id="tasks"></div>
 
-<h2>Auto Feedback Realtime</h2>
-<button onclick="runAuto()">Start</button>
+<h2>Auto Feedback</h2>
+<button onclick="runAuto()">Start Realtime</button>
 
 <progress id="bar" value="0" max="100"></progress>
+
 <div id="log"></div>
+
+<h2>Notif</h2>
+<div id="notif"></div>
 
 <script>
 let user = "";
 
+// 🔐 LOGIN
 async function login() {
   const account = document.getElementById("account").value;
   const password = document.getElementById("password").value;
 
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ account, password })
-  });
+  try {
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ account, password })
+    });
 
-  const data = await res.json();
-  if (data.success) {
-    alert("Login OK");
-    user = account;
+    const data = await res.json();
+
+    if (data.success) {
+      alert("✅ Login berhasil");
+      user = account;
+    } else {
+      alert("❌ Login gagal");
+    }
+
+  } catch (err) {
+    alert("Error: " + err.message);
   }
 }
 
+// 📥 LOAD TASK
 async function loadTasks() {
   const res = await fetch(`/tasks/${user}`);
   const data = await res.json();
@@ -47,11 +109,25 @@ async function loadTasks() {
   const el = document.getElementById("tasks");
   el.innerHTML = "";
 
+  const filter = document.getElementById("filter").value;
+
   data.data.forEach(t => {
-    el.innerHTML += `<div>${t.userName}</div>`;
+    const overdue = t.taskRemainDay <= 0;
+
+    if (filter === "overdue" && !overdue) return;
+
+    el.innerHTML += `
+      <div class="card ${overdue ? "overdue" : "safe"}">
+        <b>${t.userName}</b><br>
+        Debt: ${t.formatDebt}<br>
+        DPD: ${t.dpd}<br>
+        Sisa hari: ${t.taskRemainDay}
+      </div>
+    `;
   });
 }
 
+// 🚀 REALTIME AUTO FEEDBACK
 function runAuto() {
   const log = document.getElementById("log");
   const bar = document.getElementById("bar");
@@ -74,12 +150,27 @@ function runAuto() {
     }
 
     if (d.type === "done") {
-      log.innerHTML += "<br>🎉 Done";
+      log.innerHTML += "<br>🎉 Selesai";
       evt.close();
+      loadNotif();
     }
   };
 }
+
+// 🔔 NOTIF
+async function loadNotif() {
+  const res = await fetch(`/notif/${user}`);
+  const data = await res.json();
+
+  const el = document.getElementById("notif");
+  el.innerHTML = "";
+
+  data.data.forEach(n => {
+    el.innerHTML += `<div>⚠️ ${n.message}</div>`;
+  });
+}
+
 </script>
 
 </body>
-  </html>
+</html>
