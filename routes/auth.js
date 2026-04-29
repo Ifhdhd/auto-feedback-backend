@@ -4,29 +4,31 @@ const router = express.Router();
 const { login } = require("../services/loginService");
 const { setSession } = require("../store/sessionStore");
 
-router.post("/login", async (req, res) => {
-  try {
+router.post("/login", async (req,res)=>{
+  try{
     const { account, password } = req.body;
 
     const result = await login(account, password);
 
-    const userId = result.data?.data?.id;
-
-    if (!userId) {
-      return res.json({ success: false, error: "login gagal" });
+    if(!result.data?.success){
+      return res.json({
+        success:false,
+        error:"login gagal"
+      });
     }
+
+    const userId = result.data.data.id;
 
     setSession(userId, result.cookies);
 
     res.json({
-      success: true,
-      userId,
-      data: result.data
+      success:true,
+      userId
     });
 
-  } catch (err) {
+  }catch(err){
     res.json({
-      success: false,
+      success:false,
       error: err.message
     });
   }
