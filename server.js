@@ -3,8 +3,12 @@ const cors = require("cors");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
+
+app.get("/", (req,res)=>{
+  res.send("OK");
+});
 
 app.use("/api", require("./routes/auth"));
 app.use("/api", require("./routes/data"));
