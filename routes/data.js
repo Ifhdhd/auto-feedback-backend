@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { getSession } = require("../store/sessionStore");
-const { getTasks } = require("../services/dataService");
+const { getTasks, getExpire, getPhoto } = require("../services/dataService");
 
 router.post("/tasks", async (req,res)=>{
   const { userId } = req.body;
@@ -16,7 +16,28 @@ router.post("/tasks", async (req,res)=>{
   }
 
   const result = await getTasks(cookies);
-  res.json(result);
+  if(!result.success) return res.json(result);
+
+  const final = [];
+
+  for(const t of result.data){
+    const expire = await getExpire(cookies, t.id);
+    const photo = await getPhoto(cookies, t.id);
+
+    final.push({
+      id: t.id,
+      userName: t.userName,
+      phone: t.phoneNumber,
+      expire,
+      photo
+    });
+  }
+
+  res.json({
+    success:true,
+    total:final.length,
+    data:final
+  });
 });
 
 module.exports = router;
