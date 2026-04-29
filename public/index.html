@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auto Feedback</title>
+</head>
+<body>
+
+<h2>Login</h2>
+<input id="account" placeholder="No HP">
+<input id="password" placeholder="Password" type="password">
+<button onclick="login()">Login</button>
+
+<h2>Tasks</h2>
+<button onclick="loadTasks()">Load Tasks</button>
+<div id="tasks"></div>
+
+<h2>Auto Feedback Realtime</h2>
+<button onclick="runAuto()">Start</button>
+
+<progress id="bar" value="0" max="100"></progress>
+<div id="log"></div>
+
+<script>
+let user = "";
+
+async function login() {
+  const account = document.getElementById("account").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ account, password })
+  });
+
+  const data = await res.json();
+  if (data.success) {
+    alert("Login OK");
+    user = account;
+  }
+}
+
+async function loadTasks() {
+  const res = await fetch(`/tasks/${user}`);
+  const data = await res.json();
+
+  const el = document.getElementById("tasks");
+  el.innerHTML = "";
+
+  data.data.forEach(t => {
+    el.innerHTML += `<div>${t.userName}</div>`;
+  });
+}
+
+function runAuto() {
+  const log = document.getElementById("log");
+  const bar = document.getElementById("bar");
+
+  log.innerHTML = "";
+  bar.value = 0;
+
+  const evt = new EventSource(`/auto-stream/${user}`);
+
+  evt.onmessage = e => {
+    const d = JSON.parse(e.data);
+
+    if (d.type === "progress") {
+      bar.value = (d.current / d.total) * 100;
+      log.innerHTML = `Processing ${d.current}/${d.total} - ${d.name}`;
+    }
+
+    if (d.type === "result") {
+      log.innerHTML += `<br>✅ ${d.name}`;
+    }
+
+    if (d.type === "done") {
+      log.innerHTML += "<br>🎉 Done";
+      evt.close();
+    }
+  };
+}
+</script>
+
+</body>
+  </html>
