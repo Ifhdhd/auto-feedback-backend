@@ -8,7 +8,12 @@ function getSession(userId){
   return sessions.get(userId);
 }
 
+function deleteSession(userId){
+  sessions.delete(userId);
+}
+
 module.exports = {
   setSession,
-  getSession
+  getSession,
+  deleteSession
 };
