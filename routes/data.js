@@ -9,25 +9,22 @@ router.post("/tasks", async (req,res)=>{
 
   const cookies = getSession(userId);
   if(!cookies){
-    return res.json({
-      success:false,
-      error:"belum login"
-    });
+    return res.json({ success:false, error:"belum login" });
   }
 
   const result = await getTasks(cookies);
   if(!result.success) return res.json(result);
 
-  const final = [];
+  const final=[];
 
   for(const t of result.data){
     const expire = await getExpire(cookies, t.id);
     const photo = await getPhoto(cookies, t.id);
 
     final.push({
-      id: t.id,
-      userName: t.userName,
-      phone: t.phoneNumber,
+      id:t.id,
+      userName:t.userName,
+      phone:t.phoneNumber,
       expire,
       photo
     });
