@@ -17,7 +17,11 @@ app.use(express.static("public"));
 const USERS_FILE = path.join(__dirname, "storage/users.json");
 
 function loadUsers() {
-  return JSON.parse(fs.readFileSync(USERS_FILE));
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE));
+  } catch {
+    return [];
+  }
 }
 
 function saveUsers(data) {
@@ -34,21 +38,24 @@ app.post("/login", async (req, res) => {
     const result = await login(account, password);
 
     if (!result.data.success) {
-      return res.json({ success: false });
+      return res.json({ success: false, message: "Login gagal" });
     }
 
-    const users = loadUsers();
+    let users = loadUsers();
+
+    // ambil user lama (kalau ada)
+    const oldUser = users.find(u => u.account === account);
 
     const newUser = {
       account,
       cookies: result.cookies,
-      tasks: []
+      tasks: oldUser?.tasks || [] // 🔥 JANGAN HILANGKAN TASK LAMA
     };
 
-    const filtered = users.filter(u => u.account !== account);
-    filtered.push(newUser);
+    users = users.filter(u => u.account !== account);
+    users.push(newUser);
 
-    saveUsers(filtered);
+    saveUsers(users);
 
     res.json({ success: true });
 
@@ -58,7 +65,7 @@ app.post("/login", async (req, res) => {
 });
 
 //
-// 📥 GET TASK
+// 📥 GET TASK (DENGAN MERGE AGAR sent TIDAK HILANG)
 //
 app.get("/tasks/:account", async (req, res) => {
   try {
@@ -67,12 +74,29 @@ app.get("/tasks/:account", async (req, res) => {
 
     if (!user) return res.json({ success: false });
 
-    const tasks = await getTasks(user.cookies);
+    const result = await getTasks(user.cookies);
 
-    user.tasks = tasks.data;
+    const newTasks = result.data || [];
+
+    // 🔥 MERGE TASK (PENTING BANGET)
+    const mergedTasks = newTasks.map(newTask => {
+      const old = user.tasks.find(t => t.id == newTask.id);
+
+      return {
+        ...newTask,
+        sent: old?.sent || false // 🔥 PERTAHANKAN STATUS
+      };
+    });
+
+    user.tasks = mergedTasks;
+
     saveUsers(users);
 
-    res.json(tasks);
+    res.json({
+      success: true,
+      total: result.total,
+      data: mergedTasks
+    });
 
   } catch (err) {
     res.json({ success: false, error: err.message });
@@ -83,12 +107,14 @@ app.get("/tasks/:account", async (req, res) => {
 // 🔔 NOTIF
 //
 app.get("/notif/:account", (req, res) => {
-  const data = getNotif(req.params.account);
-  res.json({ success: true, data });
+  res.json({
+    success: true,
+    data: getNotif(req.params.account)
+  });
 });
 
 //
-// ▶️ AUTO FEEDBACK MANUAL (INI YANG PENTING)
+// ▶️ AUTO FEEDBACK MANUAL
 //
 app.get("/auto-feedback/:account", async (req, res) => {
   try {
@@ -100,18 +126,25 @@ app.get("/auto-feedback/:account", async (req, res) => {
     }
 
     if (!user.tasks || user.tasks.length === 0) {
-      return res.json({ success: false, message: "Task kosong, klik load task dulu" });
+      return res.json({
+        success: false,
+        message: "Task kosong, klik LOAD TASK dulu"
+      });
     }
 
     console.log("🚀 START AUTO:", user.account);
 
-    await checkTasks(user, (p) => {
-      console.log("PROGRESS:", p);
-    });
+    await checkTasks(user);
+
+    // 🔥 SIMPAN HASIL (WAJIB)
+    saveUsers(users);
 
     console.log("✅ DONE AUTO:", user.account);
 
-    res.json({ success: true, message: "Auto feedback selesai" });
+    res.json({
+      success: true,
+      message: "Auto feedback selesai"
+    });
 
   } catch (err) {
     console.log("ERROR AUTO:", err.message);
@@ -119,6 +152,9 @@ app.get("/auto-feedback/:account", async (req, res) => {
   }
 });
 
+//
+// 🚀 START SERVER
+//
 app.listen(3000, () => {
   console.log("Server jalan di port 3000 🚀");
 });
