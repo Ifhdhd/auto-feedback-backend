@@ -2,95 +2,215 @@
 <html>
 <head>
   <title>Auto Feedback</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
-    body { font-family: Arial; background:#111; color:#fff; }
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #0b0f1a;
+      color: white;
+    }
+
+    .container {
+      padding: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0;
+      border-radius: 8px;
+      border: none;
+      background: #1e293b;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(90deg, red, darkred);
+      color: white;
+      font-weight: bold;
+    }
+
+    .actions button {
+      width: 32%;
+      margin-right: 1%;
+      background: #1e293b;
+    }
+
     .card {
-      background:#1e1e1e;
-      margin:10px;
-      padding:10px;
-      border-radius:8px;
+      background: #1e293b;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
     }
   </style>
 </head>
+
 <body>
 
-<h3>Login</h3>
-<input id="a" placeholder="account"><br>
-<input id="p" placeholder="password"><br>
-<button onclick="login()">Login</button>
+<div class="container">
 
-<hr>
+  <h2>LOGIN</h2>
 
-<button onclick="loadTasks()">Load Task</button>
-<button onclick="runAuto()">Auto Feedback</button>
-<button onclick="loadNotif()">Notif</button>
+  <input id="account" placeholder="No HP">
+  <input id="password" placeholder="Password" type="password">
+  <button onclick="login()">MASUK</button>
 
-<div id="list"></div>
+  <hr>
+
+  <div class="actions">
+    <button onclick="loadTasks()">Load Task</button>
+    <button onclick="runAuto()">Auto</button>
+    <button onclick="loadNotif()">Notif</button>
+  </div>
+
+  <div id="list"></div>
+
+</div>
 
 <script>
-let user="";
 
+const BASE = "https://auto-feedback-backend.onrender.com";
+let user = "";
+
+// warna dot
 function getDotColor(diff){
-  return diff >= 10 ? "red" : "green";
+  if(diff >= 10) return "red";
+  return "green";
 }
 
+// LOGIN
 async function login(){
-  user = document.getElementById("a").value;
+  user = document.getElementById("account").value;
 
-  await fetch("/login",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      account:user,
-      password:document.getElementById("p").value
+  if(!user){
+    alert("Isi nomor dulu");
+    return;
+  }
+
+  const res = await fetch(BASE + "/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      account: user,
+      password: document.getElementById("password").value
     })
   });
 
-  alert("Login OK");
+  const data = await res.json();
+
+  if(data.success){
+    alert("Login berhasil");
+  } else {
+    alert("Login gagal");
+  }
 }
 
+// LOAD TASK
 async function loadTasks(){
-  const res = await fetch("/tasks/"+user);
-  const data = await res.json();
+  if(!user){
+    alert("Login dulu");
+    return;
+  }
 
-  const list = document.getElementById("list");
-  list.innerHTML = "";
+  document.getElementById("list").innerHTML = "Loading...";
 
-  data.data.forEach(t=>{
-    const color = getDotColor(t.diffDays || 0);
+  try {
+    const res = await fetch(BASE + "/tasks/" + user);
+    const data = await res.json();
 
-    list.innerHTML += `
-      <div class="card">
-        <div style="display:flex;align-items:center;">
-          <div style="
-            width:10px;
-            height:10px;
-            border-radius:50%;
-            background:${color};
-            margin-right:8px;"></div>
+    console.log("TASK:", data);
 
-          <b>${t.userName}</b>
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    if(!data.success || !data.data || data.data.length === 0){
+      list.innerHTML = "Tidak ada data";
+      return;
+    }
+
+    data.data.forEach(t => {
+
+      const color = getDotColor(t.diffDays || 0);
+
+      list.innerHTML += `
+        <div class="card">
+          <div class="row">
+            <div class="dot" style="background:${color}"></div>
+            <b>${t.userName}</b>
+          </div>
+
+          <div>Debt: ${t.formatDebt}</div>
+          <div>DPD: ${t.dpd}</div>
+          <div>${t.diffDays} hari sejak feedback</div>
         </div>
+      `;
+    });
 
-        <div>Debt: ${t.formatDebt}</div>
-        <div>DPD: ${t.dpd}</div>
-        <div>Terakhir feedback: ${t.diffDays} hari lalu</div>
-      </div>
-    `;
-  });
+  } catch(e){
+    alert("Gagal load task");
+    console.log(e);
+  }
 }
 
+// AUTO FEEDBACK
 async function runAuto(){
-  await fetch("/auto-feedback/"+user);
-  alert("Auto selesai");
+  if(!user){
+    alert("Login dulu");
+    return;
+  }
+
+  alert("Proses auto dimulai...");
+
+  try {
+    await fetch(BASE + "/auto-feedback/" + user);
+    alert("Auto selesai");
+  } catch(e){
+    alert("Auto gagal");
+  }
 }
 
+// NOTIF
 async function loadNotif(){
-  const res = await fetch("/notif/"+user);
-  const data = await res.json();
+  if(!user){
+    alert("Login dulu");
+    return;
+  }
 
-  alert(JSON.stringify(data.data,null,2));
+  try {
+    const res = await fetch(BASE + "/notif/" + user);
+    const data = await res.json();
+
+    if(!data.data || data.data.length === 0){
+      alert("Tidak ada notif");
+      return;
+    }
+
+    alert(data.data.join("\n"));
+
+  } catch(e){
+    alert("Gagal ambil notif");
+  }
 }
+
 </script>
 
 </body>
