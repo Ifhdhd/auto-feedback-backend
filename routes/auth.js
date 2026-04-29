@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 
 const { login } = require("../services/loginService");
-const { setSession } = require("../store/sessionStore");
+const { setSession, deleteSession } = require("../store/sessionStore");
 
+// LOGIN
 router.post("/login", async (req,res)=>{
   try{
     const { account, password } = req.body;
@@ -32,6 +33,14 @@ router.post("/login", async (req,res)=>{
       error: err.message
     });
   }
+});
+
+// LOGOUT
+router.post("/logout", (req,res)=>{
+  const { userId } = req.body;
+  deleteSession(userId);
+
+  res.json({ success:true });
 });
 
 module.exports = router;
