@@ -15,12 +15,11 @@ function delay(ms){
   return new Promise(r=>setTimeout(r,ms));
 }
 
-// 🔥 GET ALL TASK (FIX >20)
 async function getTasks(cookies){
   try{
-    let page = 1;
-    const size = 20;
-    let all = [];
+    let page=1;
+    const size=20;
+    let all=[];
 
     while(true){
       const res = await axios.get(
@@ -32,13 +31,13 @@ async function getTasks(cookies){
             pageSize:size,
             orderBy:1
           },
-          headers: headers(cookies)
+          headers:headers(cookies)
         }
       );
 
       const list = res.data?.data?.data || [];
 
-      if(list.length === 0) break;
+      if(list.length===0) break;
 
       all.push(...list);
 
@@ -55,7 +54,6 @@ async function getTasks(cookies){
   }
 }
 
-// 🔥 EXPIRE 20 HARI
 async function getExpire(cookies, taskId){
   try{
     const res = await axios.post(
@@ -83,7 +81,6 @@ async function getExpire(cookies, taskId){
   }
 }
 
-// 🔥 FOTO USER
 async function getPhoto(cookies, taskId){
   try{
     const res = await axios.post(
