@@ -24,7 +24,7 @@
 
     .container {
       padding: 20px;
-      padding-bottom: 80px;
+      padding-bottom: 90px;
     }
 
     input {
@@ -43,14 +43,13 @@
       margin-top: 10px;
       border-radius: 10px;
       border: none;
-      background: linear-gradient(90deg, #ff0000, #8b0000);
+      background: linear-gradient(90deg, red, darkred);
       color: white;
       font-weight: bold;
     }
 
     .header {
       text-align: center;
-      font-weight: bold;
       font-size: 18px;
       margin-bottom: 10px;
     }
@@ -58,7 +57,7 @@
     .card {
       background: #121826;
       padding: 12px;
-      border-radius: 12px;
+      border-radius: 10px;
       margin-bottom: 10px;
     }
 
@@ -114,7 +113,6 @@
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
 
@@ -130,27 +128,19 @@
       display: none;
     }
 
-    /* NOTIF PANEL */
-    .notif-panel {
-      position: fixed;
-      top: 0;
-      right: -100%;
-      width: 80%;
+    /* PROGRESS */
+    .progress-bar {
+      height: 10px;
+      background: #222;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-fill {
       height: 100%;
-      background: #0b1120;
-      transition: 0.3s;
-      padding: 15px;
-      overflow: auto;
-    }
-
-    .notif-panel.active {
-      right: 0;
-    }
-
-    .notif-item {
-      padding: 10px;
-      border-bottom: 1px solid #222;
-      font-size: 13px;
+      width: 0%;
+      background: red;
     }
   </style>
 </head>
@@ -163,38 +153,52 @@
 
 <div id="toast" class="toast"></div>
 
-<div id="notifPanel" class="notif-panel">
-  <h3>NOTIFIKASI</h3>
-  <div id="notifList"></div>
-</div>
-
 <!-- LOGIN -->
 <div id="loginScreen" class="screen active">
   <div class="container">
     <div class="header">LOGIN</div>
 
     <input id="account" placeholder="No HP">
-    <input id="password" placeholder="Password" type="password">
+    <input id="password" type="password" placeholder="Password">
 
     <button onclick="login()">MASUK</button>
   </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboardScreen" class="screen">
+<!-- HOME -->
+<div id="homeScreen" class="screen">
   <div class="container">
     <div class="header">DASHBOARD</div>
 
-    <button onclick="loadTasks()">LOAD DATA</button>
+    <button onclick="loadTasks()">LOAD TASK</button>
 
     <div id="taskList"></div>
   </div>
+</div>
 
-  <div class="bottom-nav">
-    <button onclick="goHome()">🏠<br>Home</button>
-    <button onclick="runAuto()">⚡<br>Auto</button>
-    <button onclick="toggleNotif()">🔔<br>Notif</button>
+<!-- AUTO PAGE -->
+<div id="autoScreen" class="screen">
+  <div class="container">
+    <div class="header">AUTO FEEDBACK</div>
+
+    <button onclick="startAuto()">START AUTO FEEDBACK</button>
+
+    <div class="card">
+      <div id="progressText">0 / 0</div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+    </div>
+
+    <div id="successList"></div>
   </div>
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav">
+  <button onclick="goHome()">🏠<br>Home</button>
+  <button onclick="goAuto()">⚡<br>Auto</button>
+  <button onclick="loadNotif()">🔔<br>Notif</button>
 </div>
 
 <script>
@@ -207,22 +211,16 @@ function showLoading(s){
   document.getElementById("loading").style.display = s ? "flex" : "none";
 }
 
-function showScreen(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-
 function toast(msg){
   const t = document.getElementById("toast");
   t.innerText = msg;
   t.style.display = "block";
-  setTimeout(()=> t.style.display="none", 2000);
+  setTimeout(()=> t.style.display="none",2000);
 }
 
-function toggleNotif(){
-  const panel = document.getElementById("notifPanel");
-  panel.classList.toggle("active");
-  loadNotif();
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
 }
 
 // LOGIN
@@ -231,35 +229,24 @@ async function login(){
 
   showLoading(true);
 
-  try {
-    const res = await fetch(BASE + "/login", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        account:user,
-        password:document.getElementById("password").value
-      })
-    });
+  const res = await fetch(BASE + "/login",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      account:user,
+      password:document.getElementById("password").value
+    })
+  });
 
-    const data = await res.json();
-    showLoading(false);
+  const data = await res.json();
+  showLoading(false);
 
-    if(data.success){
-      toast("Login berhasil");
-      showScreen("dashboardScreen");
-    } else {
-      toast("Login gagal");
-    }
-
-  } catch {
-    showLoading(false);
-    toast("Server error");
+  if(data.success){
+    toast("Login berhasil");
+    showScreen("homeScreen");
+  } else {
+    toast("Login gagal");
   }
-}
-
-// DOT
-function getDotColor(d){
-  return d >= 10 ? "red" : "green";
 }
 
 // LOAD TASK
@@ -273,7 +260,7 @@ async function loadTasks(){
   list.innerHTML = "";
 
   data.data.forEach(t=>{
-    const color = getDotColor(t.diffDays || 0);
+    const color = (t.diffDays >= 10) ? "red" : "green";
 
     list.innerHTML += `
       <div class="card">
@@ -281,7 +268,6 @@ async function loadTasks(){
           <div class="dot" style="background:${color}"></div>
           <b>${t.userName}</b>
         </div>
-        <div>Debt: ${t.formatDebt}</div>
         <div>${t.diffDays} hari</div>
       </div>
     `;
@@ -290,12 +276,42 @@ async function loadTasks(){
   showLoading(false);
 }
 
-// AUTO
-async function runAuto(){
+// AUTO PROCESS REALTIME
+async function startAuto(){
+  showScreen("autoScreen");
+
   showLoading(true);
-  await fetch(BASE + "/auto-feedback/" + user);
+
+  const res = await fetch(BASE + "/tasks/" + user);
+  const data = await res.json();
+
   showLoading(false);
-  toast("Auto feedback selesai");
+
+  let tasks = data.data || [];
+  let total = tasks.length;
+  let done = 0;
+
+  document.getElementById("successList").innerHTML = "";
+
+  for(let t of tasks){
+
+    if((t.diffDays || 0) < 10) continue;
+
+    await fetch(BASE + "/auto-feedback/" + user);
+
+    done++;
+
+    let percent = (done/total)*100;
+
+    document.getElementById("progressText").innerText = done + " / " + total;
+    document.getElementById("progressFill").style.width = percent + "%";
+
+    document.getElementById("successList").innerHTML += `
+      <div class="card">✔ ${t.userName}</div>
+    `;
+  }
+
+  toast("Auto selesai");
 }
 
 // NOTIF
@@ -303,18 +319,12 @@ async function loadNotif(){
   const res = await fetch(BASE + "/notif/" + user);
   const data = await res.json();
 
-  const list = document.getElementById("notifList");
-  list.innerHTML = "";
-
-  data.data.forEach(n=>{
-    list.innerHTML += `<div class="notif-item">${n}</div>`;
-  });
+  toast("Notif: " + data.data.length);
 }
 
 // NAV
-function goHome(){
-  loadTasks();
-}
+function goHome(){ showScreen("homeScreen"); }
+function goAuto(){ showScreen("autoScreen"); }
 
 </script>
 
