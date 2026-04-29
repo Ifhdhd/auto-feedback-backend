@@ -56,48 +56,56 @@ async function sendFeedback(cookies, task) {
   }
 }
 
-// MAIN
+// hitung selisih hari dari feedback terakhir
+async function enrichTask(user, task) {
+  const records = await getRecords(user.cookies, task.id);
+
+  const valid = records
+    .filter(r => r.actionReferId == 166)
+    .sort((a, b) => Number(b.createTime) - Number(a.createTime));
+
+  if (!valid.length) {
+    task.diffDays = 999; // belum pernah → anggap siap
+    return task;
+  }
+
+  const latest = valid[0];
+
+  const diffDays =
+    (Date.now() - Number(latest.createTime)) / 86400000;
+
+  task.diffDays = Math.floor(diffDays);
+
+  return task;
+}
+
+// AUTO FEEDBACK
 async function checkTasks(user) {
   let sentCount = 0;
 
   for (let t of user.tasks) {
     try {
-      // 🔒 SKIP kalau sudah pernah dikirim (persist)
       if (t.sent) continue;
 
-      const records = await getRecords(user.cookies, t.id);
-      if (!records.length) continue;
+      await enrichTask(user, t);
 
-      // ambil hanya feedback "Sementara tidak ada uang"
-      const valid = records
-        .filter(r => r.actionReferId == 166)
-        .sort((a, b) => Number(b.createTime) - Number(a.createTime));
-
-      if (!valid.length) continue;
-
-      const latest = valid[0];
-
-      const diffDays =
-        (Date.now() - Number(latest.createTime)) / 86400000;
-
-      // hanya jika sudah 20 hari
-      if (diffDays < 20) continue;
+      // 🔥 RULE FINAL
+      if (t.diffDays < 10) continue;
 
       const ok = await sendFeedback(user.cookies, t);
 
       if (ok) {
-        t.sent = true; // 🔥 simpan permanen
+        t.sent = true;
         sentCount++;
 
         addNotif(
           user.account,
-          `✔ ${t.userName} (${Math.floor(diffDays)} hari)`
+          `✔ ${t.userName} (${t.diffDays} hari)`
         );
 
-        console.log("SUCCESS:", t.userName);
+        console.log("SUCCESS:", t.userName, t.diffDays);
       }
 
-      // delay biar aman
       await sleep(800);
 
     } catch (err) {
@@ -108,4 +116,4 @@ async function checkTasks(user) {
   console.log("TOTAL TERKIRIM:", sentCount);
 }
 
-module.exports = { checkTasks };
+module.exports = { checkTasks, enrichTask };
