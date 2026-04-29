@@ -2,298 +2,94 @@
 <html>
 <head>
   <title>Auto Feedback</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #020617;
-      color: white;
-    }
-
-    .screen { display:none; padding:20px; }
-    .active { display:block; }
-
-    .header {
-      background:#020617;
-      padding:15px;
-      text-align:center;
-      font-weight:bold;
-      border-bottom:1px solid #111;
-    }
-
-    input {
-      width:100%;
-      padding:12px;
-      margin:8px 0;
-      border-radius:8px;
-      border:none;
-      background:#111827;
-      color:white;
-    }
-
-    button {
-      width:100%;
-      padding:12px;
-      margin:8px 0;
-      border-radius:8px;
-      border:none;
-      background:linear-gradient(45deg,#ff0000,#7f1d1d);
-      color:white;
-      font-weight:bold;
-    }
-
+    body { font-family: Arial; background:#111; color:#fff; }
     .card {
-      background:#111827;
-      padding:12px;
-      border-radius:10px;
-      margin:10px 0;
-    }
-
-    .overdue { border-left:5px solid red; }
-    .safe { border-left:5px solid #22c55e; }
-
-    .small { font-size:12px; color:#aaa; }
-
-    .nav {
-      position:fixed;
-      bottom:0;
-      width:100%;
-      background:#020617;
-      display:flex;
-      border-top:1px solid #111;
-    }
-
-    .nav button {
-      flex:1;
-      background:none;
-      color:white;
-      font-size:12px;
-    }
-
-    .icon {
-      display:block;
-      font-size:18px;
-    }
-
-    #loading {
-      position:fixed;
-      top:0;left:0;
-      width:100%;height:100%;
-      background:#000;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index:999;
-      display:none;
-    }
-
-    .spinner {
-      border:5px solid #222;
-      border-top:5px solid red;
-      border-radius:50%;
-      width:40px;
-      height:40px;
-      animation:spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0%{transform:rotate(0)}
-      100%{transform:rotate(360deg)}
-    }
-
-    #toast {
-      position:fixed;
-      bottom:80px;
-      left:50%;
-      transform:translateX(-50%);
-      background:#111;
-      padding:10px 20px;
+      background:#1e1e1e;
+      margin:10px;
+      padding:10px;
       border-radius:8px;
-      display:none;
     }
   </style>
 </head>
-
 <body>
 
-<div id="loading"><div class="spinner"></div></div>
-<div id="toast"></div>
+<h3>Login</h3>
+<input id="a" placeholder="account"><br>
+<input id="p" placeholder="password"><br>
+<button onclick="login()">Login</button>
 
-<!-- LOGIN -->
-<div id="loginScreen" class="screen active">
-  <div class="header">LOGIN</div>
+<hr>
 
-  <input id="account" placeholder="No HP">
-  <input id="password" type="password" placeholder="Password">
+<button onclick="loadTasks()">Load Task</button>
+<button onclick="runAuto()">Auto Feedback</button>
+<button onclick="loadNotif()">Notif</button>
 
-  <button onclick="login()">MASUK</button>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboardScreen" class="screen">
-  <div class="header">DASHBOARD</div>
-
-  <div id="homeTab">
-    <button onclick="loadTasks()">LOAD TASK</button>
-    <div id="tasks"></div>
-  </div>
-
-  <div id="autoTab" style="display:none;">
-    <button onclick="runAuto()">START AUTO</button>
-    <progress id="bar" value="0" max="100"></progress>
-    <div id="log"></div>
-  </div>
-
-  <div id="notifTab" style="display:none;">
-    <button onclick="loadNotif()">REFRESH</button>
-    <div id="notif"></div>
-  </div>
-</div>
-
-<!-- NAV -->
-<div class="nav" id="navBar" style="display:none;">
-  <button onclick="changeTab('home')">
-    <span class="icon">🏠</span>
-    Home
-  </button>
-  <button onclick="changeTab('auto')">
-    <span class="icon">⚡</span>
-    Auto
-  </button>
-  <button onclick="changeTab('notif')">
-    <span class="icon">🔔</span>
-    Notif
-  </button>
-</div>
+<div id="list"></div>
 
 <script>
 let user="";
 
-function showLoading(show=true){
-  document.getElementById("loading").style.display = show?"flex":"none";
-}
-
-function showToast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.style.display = "block";
-  setTimeout(()=>t.style.display="none",2000);
-}
-
-function showScreen(name){
-  showLoading(true);
-  setTimeout(()=>{
-    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-    document.getElementById(name).classList.add("active");
-    showLoading(false);
-  },500);
-}
-
-function changeTab(tab){
-  showLoading(true);
-  setTimeout(()=>{
-    document.getElementById("homeTab").style.display="none";
-    document.getElementById("autoTab").style.display="none";
-    document.getElementById("notifTab").style.display="none";
-    document.getElementById(tab+"Tab").style.display="block";
-    showLoading(false);
-  },400);
+function getDotColor(diff){
+  return diff >= 10 ? "red" : "green";
 }
 
 async function login(){
-  showLoading(true);
+  user = document.getElementById("a").value;
 
-  const account=document.getElementById("account").value;
-  const password=document.getElementById("password").value;
-
-  const res=await fetch("/login",{
+  await fetch("/login",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({account,password})
+    body:JSON.stringify({
+      account:user,
+      password:document.getElementById("p").value
+    })
   });
 
-  const data=await res.json();
-
-  if(data.success){
-    user=account;
-    showToast("Login berhasil");
-    showScreen("dashboardScreen");
-    document.getElementById("navBar").style.display="flex";
-    changeTab("home");
-  }else{
-    showToast("Login gagal");
-  }
-
-  showLoading(false);
+  alert("Login OK");
 }
 
 async function loadTasks(){
-  showLoading(true);
+  const res = await fetch("/tasks/"+user);
+  const data = await res.json();
 
-  const res=await fetch(`/tasks/${user}`);
-  const data=await res.json();
-
-  const el=document.getElementById("tasks");
-  el.innerHTML="";
+  const list = document.getElementById("list");
+  list.innerHTML = "";
 
   data.data.forEach(t=>{
-    const overdue=t.taskRemainDay<=0;
+    const color = getDotColor(t.diffDays || 0);
 
-    el.innerHTML+=`
-      <div class="card ${overdue?"overdue":"safe"}">
-        <b>${t.userName}</b><br>
-        <div class="small">Debt: ${t.formatDebt}</div>
-        <div class="small">DPD: ${t.dpd}</div>
-        <div class="small">Sisa hari: ${t.taskRemainDay}</div>
+    list.innerHTML += `
+      <div class="card">
+        <div style="display:flex;align-items:center;">
+          <div style="
+            width:10px;
+            height:10px;
+            border-radius:50%;
+            background:${color};
+            margin-right:8px;"></div>
+
+          <b>${t.userName}</b>
+        </div>
+
+        <div>Debt: ${t.formatDebt}</div>
+        <div>DPD: ${t.dpd}</div>
+        <div>Terakhir feedback: ${t.diffDays} hari lalu</div>
       </div>
     `;
   });
-
-  showLoading(false);
 }
 
 async function runAuto(){
-  if(!user){
-    alert("Login dulu");
-    return;
-  }
+  await fetch("/auto-feedback/"+user);
+  alert("Auto selesai");
+}
 
-  showLoading(true);
-
-  try{
-    const res = await fetch(`/auto-feedback/${user}`);
-    const data = await res.json();
-
-    showLoading(false);
-
-    if(data.success){
-      showToast("Auto feedback selesai");
-      loadNotif();
-    }else{
-      showToast(data.message || "Gagal");
-    }
-
-  }catch(e){
-    showLoading(false);
-    showToast("Error koneksi");
-  }
-  }
 async function loadNotif(){
-  showLoading(true);
+  const res = await fetch("/notif/"+user);
+  const data = await res.json();
 
-  const res=await fetch(`/notif/${user}`);
-  const data=await res.json();
-
-  const el=document.getElementById("notif");
-  el.innerHTML="";
-
-  data.data.forEach(n=>{
-    el.innerHTML+=`<div class="card">⚠ ${n.message}</div>`;
-  });
-
-  showLoading(false);
+  alert(JSON.stringify(data.data,null,2));
 }
 </script>
 
