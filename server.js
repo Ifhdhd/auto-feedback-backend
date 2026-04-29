@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors"); // 🔥 TAMBAH INI
 const fs = require("fs");
 const path = require("path");
 
@@ -8,6 +9,12 @@ const { checkTasks } = require("./services/feedbackService");
 const { getNotif } = require("./services/notifStore");
 
 const app = express();
+// 🔥 WAJIB INI
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
 app.use(express.json());
 
 const USERS_FILE = path.join(__dirname, "storage/users.json");
