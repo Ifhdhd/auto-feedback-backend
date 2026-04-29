@@ -1,107 +1,193 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Auto Feedback</title>
+  <title>Auto Feedback App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
     body {
+      margin: 0;
       font-family: Arial;
-      padding: 15px;
-      background: #f5f5f5;
+      background: #0f172a;
+      color: white;
     }
 
-    input, button, select {
-      padding: 10px;
-      margin: 5px 0;
+    .screen {
+      display: none;
+      padding: 20px;
+    }
+
+    .active {
+      display: block;
+    }
+
+    .header {
+      background: #1e293b;
+      padding: 15px;
+      font-weight: bold;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    input {
       width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: none;
+      background: #1e293b;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: none;
+      background: #22c55e;
+      color: white;
+      font-weight: bold;
     }
 
     .card {
-      background: white;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      background: #1e293b;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 10px 0;
     }
 
     .overdue {
-      background: #ffcccc;
+      border-left: 5px solid red;
     }
 
     .safe {
-      background: #ccffcc;
+      border-left: 5px solid #22c55e;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #1e293b;
+      display: flex;
+    }
+
+    .nav button {
+      flex: 1;
+      background: none;
+      border: none;
+      color: white;
+      padding: 10px;
+    }
+
+    progress {
+      width: 100%;
+      height: 10px;
     }
 
     #log {
       font-size: 12px;
-      max-height: 200px;
-      overflow: auto;
-      background: #000;
-      color: #0f0;
+      background: #020617;
       padding: 10px;
+      border-radius: 8px;
+      max-height: 150px;
+      overflow: auto;
     }
   </style>
 </head>
 
 <body>
 
-<h2>Login</h2>
-<input id="account" placeholder="No HP">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="screen active">
+  <div class="header">Login</div>
 
-<h2>Task</h2>
+  <input id="account" placeholder="No HP">
+  <input id="password" type="password" placeholder="Password">
 
-<select id="filter" onchange="loadTasks()">
-  <option value="all">Semua</option>
-  <option value="overdue">Overdue</option>
-</select>
+  <button onclick="login()">Login</button>
+</div>
 
-<button onclick="loadTasks()">Load Tasks</button>
+<!-- DASHBOARD -->
+<div id="dashboardScreen" class="screen">
+  <div class="header">Dashboard</div>
 
-<div id="tasks"></div>
+  <div id="homeTab">
+    <button onclick="loadTasks()">Load Tasks</button>
+    <div id="tasks"></div>
+  </div>
 
-<h2>Auto Feedback</h2>
-<button onclick="runAuto()">Start Realtime</button>
+  <div id="autoTab" style="display:none;">
+    <button onclick="runAuto()">Start Auto Feedback</button>
+    <progress id="bar" value="0" max="100"></progress>
+    <div id="log"></div>
+  </div>
 
-<progress id="bar" value="0" max="100"></progress>
+  <div id="notifTab" style="display:none;">
+    <button onclick="loadNotif()">Refresh Notif</button>
+    <div id="notif"></div>
+  </div>
+</div>
 
-<div id="log"></div>
-
-<h2>Notif</h2>
-<div id="notif"></div>
+<!-- NAVIGATION -->
+<div class="nav" id="navBar" style="display:none;">
+  <button onclick="showTab('home')">Home</button>
+  <button onclick="showTab('auto')">Auto</button>
+  <button onclick="showTab('notif')">Notif</button>
+</div>
 
 <script>
 let user = "";
 
-// 🔐 LOGIN
+// PINDAH SCREEN
+function showScreen(name) {
+  document.getElementById("loginScreen").classList.remove("active");
+  document.getElementById("dashboardScreen").classList.remove("active");
+
+  document.getElementById(name).classList.add("active");
+}
+
+// TAB NAVIGASI
+function showTab(tab) {
+  document.getElementById("homeTab").style.display = "none";
+  document.getElementById("autoTab").style.display = "none";
+  document.getElementById("notifTab").style.display = "none";
+
+  document.getElementById(tab + "Tab").style.display = "block";
+}
+
+// LOGIN
 async function login() {
   const account = document.getElementById("account").value;
   const password = document.getElementById("password").value;
 
-  try {
-    const res = await fetch("/login", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ account, password })
-    });
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ account, password })
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if (data.success) {
-      alert("✅ Login berhasil");
-      user = account;
-    } else {
-      alert("❌ Login gagal");
-    }
+  if (data.success) {
+    user = account;
 
-  } catch (err) {
-    alert("Error: " + err.message);
+    showScreen("dashboardScreen");
+    document.getElementById("navBar").style.display = "flex";
+
+    showTab("home");
+  } else {
+    alert("Login gagal");
   }
 }
 
-// 📥 LOAD TASK
+// LOAD TASK
 async function loadTasks() {
   const res = await fetch(`/tasks/${user}`);
   const data = await res.json();
@@ -109,25 +195,21 @@ async function loadTasks() {
   const el = document.getElementById("tasks");
   el.innerHTML = "";
 
-  const filter = document.getElementById("filter").value;
-
   data.data.forEach(t => {
     const overdue = t.taskRemainDay <= 0;
-
-    if (filter === "overdue" && !overdue) return;
 
     el.innerHTML += `
       <div class="card ${overdue ? "overdue" : "safe"}">
         <b>${t.userName}</b><br>
-        Debt: ${t.formatDebt}<br>
-        DPD: ${t.dpd}<br>
-        Sisa hari: ${t.taskRemainDay}
+        <div class="small">Debt: ${t.formatDebt}</div>
+        <div class="small">DPD: ${t.dpd}</div>
+        <div class="small">Sisa hari: ${t.taskRemainDay}</div>
       </div>
     `;
   });
 }
 
-// 🚀 REALTIME AUTO FEEDBACK
+// AUTO FEEDBACK
 function runAuto() {
   const log = document.getElementById("log");
   const bar = document.getElementById("bar");
@@ -142,22 +224,21 @@ function runAuto() {
 
     if (d.type === "progress") {
       bar.value = (d.current / d.total) * 100;
-      log.innerHTML = `Processing ${d.current}/${d.total} - ${d.name}`;
+      log.innerHTML = `Processing ${d.current}/${d.total}`;
     }
 
     if (d.type === "result") {
-      log.innerHTML += `<br>✅ ${d.name}`;
+      log.innerHTML += `<br>✔ ${d.name}`;
     }
 
     if (d.type === "done") {
-      log.innerHTML += "<br>🎉 Selesai";
+      log.innerHTML += "<br>Selesai";
       evt.close();
-      loadNotif();
     }
   };
 }
 
-// 🔔 NOTIF
+// NOTIF
 async function loadNotif() {
   const res = await fetch(`/notif/${user}`);
   const data = await res.json();
@@ -166,10 +247,9 @@ async function loadNotif() {
   el.innerHTML = "";
 
   data.data.forEach(n => {
-    el.innerHTML += `<div>⚠️ ${n.message}</div>`;
+    el.innerHTML += `<div class="card">⚠ ${n.message}</div>`;
   });
 }
-
 </script>
 
 </body>
