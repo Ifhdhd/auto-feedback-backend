@@ -24,6 +24,7 @@
 
     .container {
       padding: 20px;
+      padding-bottom: 80px;
     }
 
     input {
@@ -90,6 +91,7 @@
       font-size: 12px;
     }
 
+    /* LOADING */
     .loading {
       position: fixed;
       top:0;
@@ -100,7 +102,6 @@
       display:none;
       align-items:center;
       justify-content:center;
-      font-size:18px;
     }
 
     .spinner {
@@ -116,14 +117,55 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      padding: 12px 20px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    /* NOTIF PANEL */
+    .notif-panel {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      width: 80%;
+      height: 100%;
+      background: #0b1120;
+      transition: 0.3s;
+      padding: 15px;
+      overflow: auto;
+    }
+
+    .notif-panel.active {
+      right: 0;
+    }
+
+    .notif-item {
+      padding: 10px;
+      border-bottom: 1px solid #222;
+      font-size: 13px;
+    }
   </style>
 </head>
 
 <body>
 
-<!-- LOADING -->
-<div class="loading" id="loading">
+<div id="loading" class="loading">
   <div class="spinner"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div id="notifPanel" class="notif-panel">
+  <h3>NOTIFIKASI</h3>
+  <div id="notifList"></div>
 </div>
 
 <!-- LOGIN -->
@@ -143,7 +185,7 @@
   <div class="container">
     <div class="header">DASHBOARD</div>
 
-    <button onclick="loadTasks()">LOAD TASK</button>
+    <button onclick="loadTasks()">LOAD DATA</button>
 
     <div id="taskList"></div>
   </div>
@@ -151,7 +193,7 @@
   <div class="bottom-nav">
     <button onclick="goHome()">🏠<br>Home</button>
     <button onclick="runAuto()">⚡<br>Auto</button>
-    <button onclick="loadNotif()">🔔<br>Notif</button>
+    <button onclick="toggleNotif()">🔔<br>Notif</button>
   </div>
 </div>
 
@@ -160,9 +202,9 @@
 const BASE = "https://auto-feedback-backend.onrender.com";
 let user = "";
 
-// UI CONTROL
-function showLoading(state){
-  document.getElementById("loading").style.display = state ? "flex" : "none";
+// UI
+function showLoading(s){
+  document.getElementById("loading").style.display = s ? "flex" : "none";
 }
 
 function showScreen(id){
@@ -170,14 +212,22 @@ function showScreen(id){
   document.getElementById(id).classList.add("active");
 }
 
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.display = "block";
+  setTimeout(()=> t.style.display="none", 2000);
+}
+
+function toggleNotif(){
+  const panel = document.getElementById("notifPanel");
+  panel.classList.toggle("active");
+  loadNotif();
+}
+
 // LOGIN
 async function login(){
   user = document.getElementById("account").value;
-
-  if(!user){
-    alert("Isi nomor dulu");
-    return;
-  }
 
   showLoading(true);
 
@@ -192,119 +242,73 @@ async function login(){
     });
 
     const data = await res.json();
-
     showLoading(false);
 
     if(data.success){
-      alert("Login berhasil");
+      toast("Login berhasil");
       showScreen("dashboardScreen");
     } else {
-      alert("Login gagal");
+      toast("Login gagal");
     }
 
-  } catch(e){
+  } catch {
     showLoading(false);
-    alert("Server error");
+    toast("Server error");
   }
 }
 
-// DOT COLOR
-function getDotColor(diff){
-  return diff >= 10 ? "red" : "green";
+// DOT
+function getDotColor(d){
+  return d >= 10 ? "red" : "green";
 }
 
 // LOAD TASK
 async function loadTasks(){
-  if(!user){
-    alert("Login dulu");
-    return;
-  }
-
   showLoading(true);
 
-  try {
-    const res = await fetch(BASE + "/tasks/" + user);
-    const data = await res.json();
+  const res = await fetch(BASE + "/tasks/" + user);
+  const data = await res.json();
 
-    const list = document.getElementById("taskList");
-    list.innerHTML = "";
+  const list = document.getElementById("taskList");
+  list.innerHTML = "";
 
-    if(!data.success || !data.data){
-      list.innerHTML = "Tidak ada data";
-      showLoading(false);
-      return;
-    }
+  data.data.forEach(t=>{
+    const color = getDotColor(t.diffDays || 0);
 
-    data.data.forEach(t=>{
-      const color = getDotColor(t.diffDays || 0);
-
-      list.innerHTML += `
-        <div class="card">
-          <div class="row">
-            <div class="dot" style="background:${color}"></div>
-            <b>${t.userName}</b>
-          </div>
-
-          <div>Debt: ${t.formatDebt}</div>
-          <div>DPD: ${t.dpd}</div>
-          <div>${t.diffDays} hari sejak feedback</div>
+    list.innerHTML += `
+      <div class="card">
+        <div class="row">
+          <div class="dot" style="background:${color}"></div>
+          <b>${t.userName}</b>
         </div>
-      `;
-    });
+        <div>Debt: ${t.formatDebt}</div>
+        <div>${t.diffDays} hari</div>
+      </div>
+    `;
+  });
 
-    showLoading(false);
-
-  } catch(e){
-    showLoading(false);
-    alert("Gagal load");
-  }
+  showLoading(false);
 }
 
 // AUTO
 async function runAuto(){
-  if(!user){
-    alert("Login dulu");
-    return;
-  }
-
   showLoading(true);
-
-  try {
-    await fetch(BASE + "/auto-feedback/" + user);
-    showLoading(false);
-    alert("Auto selesai");
-  } catch(e){
-    showLoading(false);
-    alert("Auto gagal");
-  }
+  await fetch(BASE + "/auto-feedback/" + user);
+  showLoading(false);
+  toast("Auto feedback selesai");
 }
 
 // NOTIF
 async function loadNotif(){
-  if(!user){
-    alert("Login dulu");
-    return;
-  }
+  const res = await fetch(BASE + "/notif/" + user);
+  const data = await res.json();
 
-  showLoading(true);
+  const list = document.getElementById("notifList");
+  list.innerHTML = "";
 
-  try {
-    const res = await fetch(BASE + "/notif/" + user);
-    const data = await res.json();
-
-    showLoading(false);
-
-    if(!data.data || data.data.length === 0){
-      alert("Tidak ada notif");
-      return;
-    }
-
-    alert(data.data.join("\n"));
-
-  } catch(e){
-    showLoading(false);
-    alert("Gagal notif");
-  }
+  data.data.forEach(n=>{
+    list.innerHTML += `<div class="notif-item">${n}</div>`;
+  });
 }
 
 // NAV
