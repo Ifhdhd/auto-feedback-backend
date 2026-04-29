@@ -12,6 +12,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 
 const USERS_FILE = path.join(__dirname, "storage/users.json");
 
@@ -28,15 +29,13 @@ function saveUsers(data) {
 app.post("/login", async (req, res) => {
   try {
     const { account, password } = req.body;
-
     const result = await login(account, password);
 
     if (!result.data.success) {
-      return res.json({ success: false, data: result.data });
+      return res.json({ success: false });
     }
 
     let users = loadUsers();
-
     users = users.filter(u => u.account !== account);
 
     users.push({
@@ -70,7 +69,7 @@ app.get("/tasks/:account", async (req, res) => {
     res.json(tasks);
 
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    res.json({ success: false });
   }
 });
 
@@ -79,29 +78,59 @@ app.get("/notif/:account", (req, res) => {
   res.json({ success: true, data: getNotif(req.params.account) });
 });
 
-// 🚀 AUTO MANUAL
-app.post("/auto/:account", async (req, res) => {
-  try {
-    const users = loadUsers();
-    const user = users.find(u => u.account === req.params.account);
+//
+// 🚀 REALTIME AUTO FEEDBACK (SSE)
+//
+app.get("/auto-stream/:account", async (req, res) => {
+  const users = loadUsers();
+  const user = users.find(u => u.account === req.params.account);
 
-    if (!user) {
-      return res.json({ success: false, message: "User tidak ada" });
+  if (!user) return res.end();
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive"
+  });
+
+  const tasks = user.tasks || [];
+  let total = tasks.length;
+
+  for (let i = 0; i < total; i++) {
+    const t = tasks[i];
+
+    res.write(`data: ${JSON.stringify({
+      type: "progress",
+      current: i + 1,
+      total,
+      name: t.userName
+    })}\n\n`);
+
+    try {
+      await checkTasks({
+        ...user,
+        tasks: [t]
+      });
+
+      res.write(`data: ${JSON.stringify({
+        type: "result",
+        name: t.userName,
+        status: "done"
+      })}\n\n`);
+
+    } catch {
+      res.write(`data: ${JSON.stringify({
+        type: "result",
+        name: t.userName,
+        status: "error"
+      })}\n\n`);
     }
-
-    if (!user.tasks || user.tasks.length === 0) {
-      return res.json({ success: false, message: "Load task dulu" });
-    }
-
-    await checkTasks(user);
-
-    res.json({ success: true, message: "Auto feedback selesai" });
-
-  } catch (err) {
-    res.json({ success: false, error: err.message });
   }
+
+  res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+  res.end();
 });
 
 app.listen(3000, () => {
-  console.log("Server jalan di port 3000 🚀");
+  console.log("Server jalan 🚀");
 });
