@@ -16,7 +16,8 @@ async function login(account, password){
         "X-COUNTRY-ID":"1",
         "countryCode":"ID",
         "timeZoneId":"Asia/Jakarta"
-      }
+      },
+      timeout:20000
     }
   );
 
