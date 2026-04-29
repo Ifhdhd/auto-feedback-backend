@@ -1,5 +1,5 @@
 const express = require("express");
-const cors = require("cors"); // 🔥 TAMBAH INI
+const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 
@@ -9,17 +9,14 @@ const { checkTasks } = require("./services/feedbackService");
 const { getNotif } = require("./services/notifStore");
 
 const app = express();
-// 🔥 WAJIB INI
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
-}));
+
+app.use(cors());
 app.use(express.json());
 
 const USERS_FILE = path.join(__dirname, "storage/users.json");
 
 function loadUsers() {
+  if (!fs.existsSync(USERS_FILE)) return [];
   return JSON.parse(fs.readFileSync(USERS_FILE));
 }
 
@@ -27,9 +24,7 @@ function saveUsers(data) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
 }
 
-//
-// 🔐 LOGIN USER
-//
+// 🔐 LOGIN
 app.post("/login", async (req, res) => {
   try {
     const { account, password } = req.body;
@@ -40,32 +35,26 @@ app.post("/login", async (req, res) => {
       return res.json({ success: false, data: result.data });
     }
 
-    const users = loadUsers();
+    let users = loadUsers();
 
-    const newUser = {
+    users = users.filter(u => u.account !== account);
+
+    users.push({
       account,
       cookies: result.cookies,
       tasks: []
-    };
-
-    const filtered = users.filter(u => u.account !== account);
-    filtered.push(newUser);
-
-    saveUsers(filtered);
-
-    res.json({
-      success: true,
-      cookies: result.cookies
     });
+
+    saveUsers(users);
+
+    res.json({ success: true });
 
   } catch (err) {
     res.json({ success: false, error: err.message });
   }
 });
 
-//
-// 📥 AMBIL TASK
-//
+// 📥 TASK
 app.get("/tasks/:account", async (req, res) => {
   try {
     const users = loadUsers();
@@ -85,29 +74,33 @@ app.get("/tasks/:account", async (req, res) => {
   }
 });
 
-//
-// 🔔 CEK NOTIF
-//
+// 🔔 NOTIF
 app.get("/notif/:account", (req, res) => {
-  const data = getNotif(req.params.account);
-  res.json({ success: true, data });
+  res.json({ success: true, data: getNotif(req.params.account) });
 });
 
-//
-// 🔁 AUTO CHECK (loop tiap 5 menit)
-//
-setInterval(async () => {
-  console.log("Running auto-check...");
+// 🚀 AUTO MANUAL
+app.post("/auto/:account", async (req, res) => {
+  try {
+    const users = loadUsers();
+    const user = users.find(u => u.account === req.params.account);
 
-  const users = loadUsers();
+    if (!user) {
+      return res.json({ success: false, message: "User tidak ada" });
+    }
 
-  for (let user of users) {
-    if (!user.tasks || user.tasks.length === 0) continue;
+    if (!user.tasks || user.tasks.length === 0) {
+      return res.json({ success: false, message: "Load task dulu" });
+    }
 
     await checkTasks(user);
-  }
 
-}, 5 * 60 * 1000);
+    res.json({ success: true, message: "Auto feedback selesai" });
+
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
 
 app.listen(3000, () => {
   console.log("Server jalan di port 3000 🚀");
