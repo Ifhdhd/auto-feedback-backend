@@ -1,7 +1,7 @@
 const express = require("express");
-const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const cors = require("cors");
 
 const { login } = require("./services/loginService");
 const { getTasks } = require("./services/taskService");
@@ -17,7 +17,6 @@ app.use(express.static("public"));
 const USERS_FILE = path.join(__dirname, "storage/users.json");
 
 function loadUsers() {
-  if (!fs.existsSync(USERS_FILE)) return [];
   return JSON.parse(fs.readFileSync(USERS_FILE));
 }
 
@@ -25,26 +24,31 @@ function saveUsers(data) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
 }
 
+//
 // 🔐 LOGIN
+//
 app.post("/login", async (req, res) => {
   try {
     const { account, password } = req.body;
+
     const result = await login(account, password);
 
     if (!result.data.success) {
       return res.json({ success: false });
     }
 
-    let users = loadUsers();
-    users = users.filter(u => u.account !== account);
+    const users = loadUsers();
 
-    users.push({
+    const newUser = {
       account,
       cookies: result.cookies,
       tasks: []
-    });
+    };
 
-    saveUsers(users);
+    const filtered = users.filter(u => u.account !== account);
+    filtered.push(newUser);
+
+    saveUsers(filtered);
 
     res.json({ success: true });
 
@@ -53,7 +57,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// 📥 TASK
+//
+// 📥 GET TASK
+//
 app.get("/tasks/:account", async (req, res) => {
   try {
     const users = loadUsers();
@@ -69,68 +75,50 @@ app.get("/tasks/:account", async (req, res) => {
     res.json(tasks);
 
   } catch (err) {
-    res.json({ success: false });
+    res.json({ success: false, error: err.message });
   }
 });
 
+//
 // 🔔 NOTIF
+//
 app.get("/notif/:account", (req, res) => {
-  res.json({ success: true, data: getNotif(req.params.account) });
+  const data = getNotif(req.params.account);
+  res.json({ success: true, data });
 });
 
 //
-// 🚀 REALTIME AUTO FEEDBACK (SSE)
+// ▶️ AUTO FEEDBACK MANUAL (INI YANG PENTING)
 //
-app.get("/auto-stream/:account", async (req, res) => {
-  const users = loadUsers();
-  const user = users.find(u => u.account === req.params.account);
+app.get("/auto-feedback/:account", async (req, res) => {
+  try {
+    const users = loadUsers();
+    const user = users.find(u => u.account === req.params.account);
 
-  if (!user) return res.end();
-
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive"
-  });
-
-  const tasks = user.tasks || [];
-  let total = tasks.length;
-
-  for (let i = 0; i < total; i++) {
-    const t = tasks[i];
-
-    res.write(`data: ${JSON.stringify({
-      type: "progress",
-      current: i + 1,
-      total,
-      name: t.userName
-    })}\n\n`);
-
-    try {
-      await checkTasks({
-        ...user,
-        tasks: [t]
-      });
-
-      res.write(`data: ${JSON.stringify({
-        type: "result",
-        name: t.userName,
-        status: "done"
-      })}\n\n`);
-
-    } catch {
-      res.write(`data: ${JSON.stringify({
-        type: "result",
-        name: t.userName,
-        status: "error"
-      })}\n\n`);
+    if (!user) {
+      return res.json({ success: false, message: "User tidak ditemukan" });
     }
-  }
 
-  res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
-  res.end();
+    if (!user.tasks || user.tasks.length === 0) {
+      return res.json({ success: false, message: "Task kosong, klik load task dulu" });
+    }
+
+    console.log("🚀 START AUTO:", user.account);
+
+    await checkTasks(user, (p) => {
+      console.log("PROGRESS:", p);
+    });
+
+    console.log("✅ DONE AUTO:", user.account);
+
+    res.json({ success: true, message: "Auto feedback selesai" });
+
+  } catch (err) {
+    console.log("ERROR AUTO:", err.message);
+    res.json({ success: false, error: err.message });
+  }
 });
 
 app.listen(3000, () => {
-  console.log("Server jalan 🚀");
+  console.log("Server jalan di port 3000 🚀");
 });
