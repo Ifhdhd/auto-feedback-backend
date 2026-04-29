@@ -9,6 +9,8 @@ app.use(express.json());
 app.use("/api", require("./routes/auth"));
 app.use("/api", require("./routes/data"));
 
-app.listen(3000, () => {
-  console.log("server jalan");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("server jalan di", PORT);
 });
