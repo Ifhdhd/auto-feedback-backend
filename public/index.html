@@ -254,33 +254,32 @@ async function loadTasks(){
   showLoading(false);
 }
 
-function runAuto(){
-  const evt=new EventSource(`/auto-stream/${user}`);
-  const bar=document.getElementById("bar");
-  const log=document.getElementById("log");
+async function runAuto(){
+  if(!user){
+    alert("Login dulu");
+    return;
+  }
 
-  log.innerHTML="";
-  bar.value=0;
+  showLoading(true);
 
-  evt.onmessage=e=>{
-    const d=JSON.parse(e.data);
+  try{
+    const res = await fetch(`/auto-feedback/${user}`);
+    const data = await res.json();
 
-    if(d.type==="progress"){
-      bar.value=(d.current/d.total)*100;
-      log.innerHTML=`Processing ${d.current}/${d.total}`;
+    showLoading(false);
+
+    if(data.success){
+      showToast("Auto feedback selesai");
+      loadNotif();
+    }else{
+      showToast(data.message || "Gagal");
     }
 
-    if(d.type==="result"){
-      log.innerHTML+=`<br>✔ ${d.name}`;
-    }
-
-    if(d.type==="done"){
-      log.innerHTML+="<br>Selesai";
-      evt.close();
-    }
-  };
-}
-
+  }catch(e){
+    showLoading(false);
+    showToast("Error koneksi");
+  }
+  }
 async function loadNotif(){
   showLoading(true);
 
