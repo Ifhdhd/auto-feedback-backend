@@ -22,6 +22,12 @@
       display: block;
     }
 
+    .center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .container {
       padding: 20px;
       padding-bottom: 90px;
@@ -101,6 +107,7 @@
       display:none;
       align-items:center;
       justify-content:center;
+      z-index:999;
     }
 
     .spinner {
@@ -116,32 +123,47 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* TOAST */
-    .toast {
+    /* 🔥 DRAWER LOG */
+    .drawer {
       position: fixed;
-      bottom: 90px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e293b;
-      padding: 12px 20px;
-      border-radius: 8px;
-      display: none;
-    }
-
-    /* PROGRESS */
-    .progress-bar {
-      height: 10px;
-      background: #222;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 10px;
-    }
-
-    .progress-fill {
+      top: 0;
+      right: -100%;
+      width: 85%;
       height: 100%;
-      width: 0%;
-      background: red;
+      background: #0b1120;
+      box-shadow: -5px 0 20px rgba(0,0,0,0.7);
+      transition: 0.4s;
+      z-index: 1000;
+      overflow: auto;
     }
+
+    .drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      padding: 15px;
+      font-weight: bold;
+      border-bottom: 1px solid #222;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .log {
+      padding: 10px;
+      font-size: 12px;
+    }
+
+    .log-item {
+      padding: 10px;
+      border-bottom: 1px solid #111;
+    }
+
+    .success { color: #00ff9d; }
+    .error { color: red; }
+    .skip { color: orange; }
+    .info { color: #4cc9f0; }
+
   </style>
 </head>
 
@@ -151,11 +173,18 @@
   <div class="spinner"></div>
 </div>
 
-<div id="toast" class="toast"></div>
+<!-- 🔥 DRAWER -->
+<div id="drawer" class="drawer">
+  <div class="drawer-header">
+    <span>LOG AUTO</span>
+    <button onclick="closeDrawer()" style="background:none;border:none;color:white;">X</button>
+  </div>
+  <div id="logContainer" class="log"></div>
+</div>
 
 <!-- LOGIN -->
-<div id="loginScreen" class="screen active">
-  <div class="container">
+<div id="loginScreen" class="screen active center">
+  <div style="width:100%; max-width:320px;">
     <div class="header">LOGIN</div>
 
     <input id="account" placeholder="No HP">
@@ -176,19 +205,12 @@
   </div>
 </div>
 
-<!-- AUTO PAGE -->
+<!-- AUTO -->
 <div id="autoScreen" class="screen">
   <div class="container">
     <div class="header">AUTO FEEDBACK</div>
 
-    <button onclick="startAuto()">START AUTO FEEDBACK</button>
-
-    <div class="card">
-      <div id="progressText">0 / 0</div>
-      <div class="progress-bar">
-        <div id="progressFill" class="progress-fill"></div>
-      </div>
-    </div>
+    <button onclick="startAuto()">START AUTO</button>
 
     <div id="successList"></div>
   </div>
@@ -198,7 +220,7 @@
 <div class="bottom-nav">
   <button onclick="goHome()">🏠<br>Home</button>
   <button onclick="goAuto()">⚡<br>Auto</button>
-  <button onclick="loadNotif()">🔔<br>Notif</button>
+  <button onclick="openDrawer()">📋<br>Log</button>
 </div>
 
 <script>
@@ -206,18 +228,34 @@
 const BASE = "https://auto-feedback-backend-1.onrender.com";
 let user = "";
 
-// UI
+// LOADING
 function showLoading(s){
   document.getElementById("loading").style.display = s ? "flex" : "none";
 }
 
-function toast(msg){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.style.display = "block";
-  setTimeout(()=> t.style.display="none",2000);
+// DRAWER
+function openDrawer(){
+  document.getElementById("drawer").classList.add("open");
 }
 
+function closeDrawer(){
+  document.getElementById("drawer").classList.remove("open");
+}
+
+// LOG
+function addLog(msg,type="info"){
+  const el = document.getElementById("logContainer");
+
+  el.innerHTML += `
+    <div class="log-item ${type}">
+      • ${msg}
+    </div>
+  `;
+
+  el.scrollTop = el.scrollHeight;
+}
+
+// SCREEN
 function showScreen(id){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
@@ -242,10 +280,10 @@ async function login(){
   showLoading(false);
 
   if(data.success){
-    toast("Login berhasil");
     showScreen("homeScreen");
+    addLog("Login sukses","success");
   } else {
-    toast("Login gagal");
+    addLog("Login gagal","error");
   }
 }
 
@@ -260,7 +298,8 @@ async function loadTasks(){
   list.innerHTML = "";
 
   data.data.forEach(t=>{
-    const color = (t.diffDays >= 10) ? "red" : "green";
+    const hari = t.diffDays || 0;
+    const color = (hari >= 10) ? "red" : "green";
 
     list.innerHTML += `
       <div class="card">
@@ -268,7 +307,7 @@ async function loadTasks(){
           <div class="dot" style="background:${color}"></div>
           <b>${t.userName}</b>
         </div>
-        <div>${t.diffDays} hari</div>
+        <div>${hari} hari sejak feedback</div>
       </div>
     `;
   });
@@ -276,8 +315,9 @@ async function loadTasks(){
   showLoading(false);
 }
 
-// AUTO PROCESS REALTIME
+// AUTO
 async function startAuto(){
+
   showScreen("autoScreen");
 
   showLoading(true);
@@ -288,38 +328,28 @@ async function startAuto(){
   showLoading(false);
 
   let tasks = data.data || [];
-  let total = tasks.length;
-  let done = 0;
-
-  document.getElementById("successList").innerHTML = "";
 
   for(let t of tasks){
 
-    if((t.diffDays || 0) < 10) continue;
+    if((t.diffDays || 0) < 10){
+      addLog("Skip " + t.userName,"skip");
+      continue;
+    }
 
-    await fetch(BASE + "/auto-feedback/" + user);
+    try{
+      await fetch(BASE + "/auto-feedback/" + user);
+      addLog("Success " + t.userName,"success");
 
-    done++;
+      document.getElementById("successList").innerHTML += `
+        <div class="card">✔ ${t.userName}</div>
+      `;
 
-    let percent = (done/total)*100;
-
-    document.getElementById("progressText").innerText = done + " / " + total;
-    document.getElementById("progressFill").style.width = percent + "%";
-
-    document.getElementById("successList").innerHTML += `
-      <div class="card">✔ ${t.userName}</div>
-    `;
+    }catch(e){
+      addLog("Error " + t.userName,"error");
+    }
   }
 
-  toast("Auto selesai");
-}
-
-// NOTIF
-async function loadNotif(){
-  const res = await fetch(BASE + "/notif/" + user);
-  const data = await res.json();
-
-  toast("Notif: " + data.data.length);
+  addLog("Auto selesai","info");
 }
 
 // NAV
