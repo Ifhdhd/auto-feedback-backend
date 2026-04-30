@@ -7,11 +7,12 @@
 <style>
 body{
   margin:0;
-  font-family:monospace;
-  color:#fff;
+  font-family:Arial;
   background:#02040a;
+  color:white;
 }
 
+/* GRID */
 body::before{
   content:"";
   position:fixed;
@@ -23,10 +24,12 @@ body::before{
   background-size:40px 40px;
 }
 
+/* SCREEN */
 .screen{display:none;height:100vh;overflow:auto;}
 .active{display:block;}
-.container{padding:15px;padding-bottom:100px;}
+.container{padding:15px;padding-bottom:90px;}
 
+/* PANEL */
 .panel{
   background:rgba(10,15,30,0.6);
   backdrop-filter:blur(10px);
@@ -34,14 +37,17 @@ body::before{
   border-radius:12px;
   padding:12px;
   margin-bottom:10px;
+  box-shadow:0 0 10px rgba(255,0,0,0.2);
 }
 
+/* HEADER */
 .header{
   color:red;
+  margin-bottom:8px;
   text-shadow:0 0 10px red;
-  margin-bottom:10px;
 }
 
+/* BUTTON */
 button{
   width:100%;
   padding:12px;
@@ -53,6 +59,7 @@ button{
   font-weight:bold;
 }
 
+/* INPUT */
 input{
   width:100%;
   padding:12px;
@@ -63,6 +70,24 @@ input{
   color:white;
 }
 
+/* STATS */
+.stats{
+  display:flex;
+  gap:10px;
+}
+.stat{
+  flex:1;
+  text-align:center;
+  background:rgba(0,0,0,0.4);
+  padding:10px;
+  border-radius:10px;
+}
+.stat b{
+  color:red;
+  font-size:18px;
+}
+
+/* CARD */
 .card{
   background:rgba(0,0,0,0.4);
   padding:10px;
@@ -75,6 +100,7 @@ input{
   display:inline-block;margin-right:5px;
 }
 
+/* PROGRESS */
 .progress-bar{
   height:10px;
   background:#111;
@@ -82,7 +108,6 @@ input{
   overflow:hidden;
   margin-top:8px;
 }
-
 .progress-fill{
   height:100%;
   width:0%;
@@ -91,36 +116,59 @@ input{
 
 /* LOG */
 .log{
-  background:black;
-  color:#00ff9c;
-  padding:10px;
-  height:250px;
-  overflow:auto;
-  font-size:12px;
+  background:rgba(0,0,0,0.6);
   border-radius:10px;
-  border:1px solid #0f0;
+  padding:10px;
+  height:220px;
+  overflow:auto;
+  font-size:13px;
 }
+
+.log-success{color:#00ff9c;}
+.log-skip{color:orange;}
+.log-error{color:red;}
+.log-info{color:#aaa;}
 
 /* NAV */
 .bottom-nav{
   position:fixed;
   bottom:0;
   width:100%;
-  background:#05070f;
   display:flex;
+  background:#05070f;
 }
-
 .bottom-nav button{
   flex:1;
   background:none;
   color:#aaa;
 }
 
+/* LOADING */
+.loading{
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.spinner{
+  width:40px;height:40px;
+  border:4px solid #222;
+  border-top:4px solid red;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{100%{transform:rotate(360deg);}}
 </style>
 </head>
 
 <body>
 
+<div id="loading" class="loading"><div class="spinner"></div></div>
+
+<!-- LOGIN -->
 <div id="loginScreen" class="screen active">
   <div class="container">
     <div class="panel">
@@ -132,22 +180,33 @@ input{
   </div>
 </div>
 
+<!-- HOME -->
 <div id="homeScreen" class="screen">
   <div class="container">
+
     <div class="panel">
-      <div class="header">DATA</div>
-      <button onclick="loadTasks()">LOAD TASK</button>
-      <button onclick="startAuto()">AUTO FEEDBACK</button>
+      <div class="header">SYSTEM STATUS</div>
+      <div class="stats">
+        <div class="stat"><b id="total">0</b><br>Total</div>
+        <div class="stat"><b id="ready">0</b><br>Ready</div>
+        <div class="stat"><b id="skip">0</b><br>Skip</div>
+        <div class="stat"><b id="done">0</b><br>Done</div>
+      </div>
+      <button onclick="loadTasks()">SYNC DATA</button>
     </div>
+
     <div id="taskList"></div>
+
   </div>
 </div>
 
+<!-- AUTO -->
 <div id="autoScreen" class="screen">
   <div class="container">
 
     <div class="panel">
-      <div class="header">AUTO</div>
+      <div class="header">AUTO EXECUTION</div>
+
       <button onclick="startAuto()">START</button>
       <button onclick="stopAuto()">STOP</button>
 
@@ -158,7 +217,7 @@ input{
     </div>
 
     <div class="panel">
-      <div class="header">SYSTEM LOG</div>
+      <div class="header">PROCESS LOG</div>
       <div id="log" class="log"></div>
     </div>
 
@@ -166,20 +225,18 @@ input{
 </div>
 
 <div class="bottom-nav">
-  <button onclick="goHome()">HOME</button>
-  <button onclick="goAuto()">AUTO</button>
+  <button onclick="goHome()">🏠<br>Home</button>
+  <button onclick="goAuto()">⚡<br>Auto</button>
 </div>
 
 <script>
 
-const BASE="https://auto-feedback-backend-1.onrender.com";
+const BASE="https://auto-feedback-backend.onrender.com";
 let user="";
 let stopFlag=false;
 
-function log(msg){
-  let el=document.getElementById("log");
-  el.innerHTML+="<div>> "+msg+"</div>";
-  el.scrollTop=el.scrollHeight;
+function showLoading(s){
+  document.getElementById("loading").style.display=s?"flex":"none";
 }
 
 function showScreen(id){
@@ -187,8 +244,18 @@ function showScreen(id){
   document.getElementById(id).classList.add("active");
 }
 
+function log(msg,type="info"){
+  let el=document.getElementById("log");
+  let cls="log-"+type;
+  el.innerHTML+=`<div class="${cls}">• ${msg}</div>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+// LOGIN
 async function login(){
   user=document.getElementById("account").value;
+
+  showLoading(true);
 
   let res=await fetch(BASE+"/login",{
     method:"POST",
@@ -200,6 +267,7 @@ async function login(){
   });
 
   let data=await res.json();
+  showLoading(false);
 
   if(data.success){
     showScreen("homeScreen");
@@ -208,31 +276,49 @@ async function login(){
   }
 }
 
+// LOAD TASK
 async function loadTasks(){
+  showLoading(true);
+
   let res=await fetch(BASE+"/tasks/"+user);
   let data=await res.json();
+
+  showLoading(false);
+
+  let total=0,ready=0,skip=0;
 
   let list=document.getElementById("taskList");
   list.innerHTML="";
 
   data.data.forEach(t=>{
-    let color=(t.diffDays>=10)?"red":"lime";
+    total++;
+    let ok=t.diffDays>=10;
+
+    if(ok) ready++; else skip++;
+
+    let color=ok?"red":"lime";
 
     list.innerHTML+=`
       <div class="card">
         <span class="dot" style="background:${color}"></span>
-        ${t.userName} - ${t.diffDays} hari
+        <b>${t.userName}</b>
+        <div>${t.diffDays} hari</div>
       </div>
     `;
   });
+
+  document.getElementById("total").innerText=total;
+  document.getElementById("ready").innerText=ready;
+  document.getElementById("skip").innerText=skip;
 }
 
+// AUTO
 async function startAuto(){
 
   stopFlag=false;
   showScreen("autoScreen");
 
-  log("Start auto feedback...");
+  log("Start auto feedback","info");
 
   let res=await fetch(BASE+"/tasks/"+user);
   let data=await res.json();
@@ -244,14 +330,14 @@ async function startAuto(){
   for(let t of tasks){
 
     if(stopFlag){
-      log("STOPPED");
+      log("Stopped","error");
       break;
     }
 
-    log("Checking "+t.userName+" ("+t.diffDays+" hari)");
+    log("Check "+t.userName+" ("+t.diffDays+" hari)","info");
 
     if(t.diffDays<10){
-      log("Skip");
+      log("Skip","skip");
       continue;
     }
 
@@ -260,16 +346,17 @@ async function startAuto(){
     done++;
 
     let percent=(done/total)*100;
-
     document.getElementById("progressText").innerText=done+" / "+total;
     document.getElementById("progressFill").style.width=percent+"%";
 
-    log("✔ Success");
+    log("Success","success");
 
     await new Promise(r=>setTimeout(r,1000));
   }
 
-  log("DONE");
+  document.getElementById("done").innerText=done;
+
+  log("Finished","success");
 }
 
 function stopAuto(){
