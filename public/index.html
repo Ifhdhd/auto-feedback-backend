@@ -10,6 +10,7 @@ body{
   font-family:Arial;
   color:#fff;
   background:#02040a;
+  overflow-x: hidden;
 }
 
 body::before{
@@ -22,12 +23,66 @@ body::before{
     linear-gradient(90deg, rgba(255,0,0,0.05) 1px, transparent 1px);
   background-size:40px 40px;
   pointer-events:none;
+  z-index:0;
 }
 
-.screen{display:none;height:100vh;overflow:auto;}
-.active{display:block;}
-.container{padding:15px;padding-bottom:100px;}
+/* LOADING */
+.loading{
+  position:fixed;
+  inset:0;
+  background:rgba(2,4,10,0.92);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:15px;
+  z-index:9999;
+}
 
+.spinner{
+  width:56px; height:56px;
+  border:6px solid #222;
+  border-top:6px solid #ff0033;
+  border-right:6px solid #ff6600;
+  border-radius:50%;
+  animation:spin 0.9s linear infinite;
+}
+
+.loading-text{
+  color:#ff3366;
+  font-size:15px;
+  letter-spacing:2px;
+}
+
+@keyframes spin{100%{transform:rotate(360deg);}}
+
+/* Notif Sidebar */
+#notifSidebar{
+  position:fixed;
+  top:0; right:-100%;
+  width:85%;
+  height:100%;
+  background:#0a0e1a;
+  border-left:2px solid #ff0033;
+  transition: right 0.4s ease;
+  z-index:10000;
+  padding:20px;
+  overflow-y:auto;
+}
+
+#notifSidebar.active{
+  right:0;
+}
+
+.notif-header{
+  color:red;
+  font-size:18px;
+  margin-bottom:15px;
+  padding-bottom:10px;
+  border-bottom:1px solid rgba(255,0,0,0.3);
+}
+
+/* Panel & Card */
 .panel{
   background:rgba(10,15,30,0.6);
   backdrop-filter:blur(10px);
@@ -75,11 +130,7 @@ input{
   color:white;
 }
 
-.stats{
-  display:flex;
-  gap:10px;
-}
-
+.stats{display:flex; gap:10px;}
 .stat{
   flex:1;
   text-align:center;
@@ -88,11 +139,7 @@ input{
   border-radius:10px;
   border:1px solid rgba(255,0,0,0.2);
 }
-
-.stat b{
-  font-size:20px;
-  color:red;
-}
+.stat b{font-size:20px; color:red;}
 
 /* Task Card */
 .task-card{
@@ -142,7 +189,6 @@ input{
   border-radius:10px;
   overflow:hidden;
   margin:12px 0;
-  position:relative;
 }
 
 .progress-fill{
@@ -155,7 +201,7 @@ input{
   background:rgba(0,0,0,0.7);
   border-radius:10px;
   padding:12px;
-  height:280px;
+  height:300px;
   overflow:auto;
   font-size:13.5px;
   margin-top:10px;
@@ -173,6 +219,7 @@ input{
   background:#05070f;
   display:flex;
   border-top:1px solid #111;
+  z-index:10;
 }
 
 .bottom-nav button{
@@ -182,28 +229,6 @@ input{
   font-size:12px;
   padding:10px 0;
 }
-
-/* Loading */
-.loading{
-  position:fixed;
-  width:100%;height:100%;
-  background:rgba(0,0,0,0.85);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
-}
-
-.spinner{
-  width:50px;height:50px;
-  border:5px solid #222;
-  border-top:5px solid red;
-  border-right:5px solid #ff6600;
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-}
-
-@keyframes spin{100%{transform:rotate(360deg);}}
 
 .toast{
   position:fixed;
@@ -215,14 +240,17 @@ input{
   border-radius:8px;
   border:1px solid red;
   display:none;
-  z-index:1000;
+  z-index:10001;
 }
 </style>
 </head>
 
 <body>
 
-<div id="loading" class="loading"><div class="spinner"></div></div>
+<div id="loading" class="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">ACCESSING SYSTEM...</div>
+</div>
 <div id="toast" class="toast"></div>
 
 <!-- LOGIN -->
@@ -250,7 +278,6 @@ input{
       </div>
       <button onclick="loadTasks()">LOAD DATA</button>
     </div>
-
     <div id="taskList"></div>
   </div>
 </div>
@@ -260,7 +287,6 @@ input{
   <div class="container">
     <div class="panel">
       <div class="header">AUTO FEEDBACK PROTOCOL</div>
-
       <button onclick="startAuto()">🚀 START AUTO FEEDBACK</button>
       <button class="btn-stop" onclick="stopAuto()">⛔ STOP PROCESS</button>
 
@@ -277,19 +303,26 @@ input{
   </div>
 </div>
 
+<!-- NOTIF SIDEBAR -->
+<div id="notifSidebar">
+  <div class="notif-header">AUTO FEEDBACK LOG</div>
+  <div id="notifLog" class="log" style="height: calc(100vh - 120px);"></div>
+  <button onclick="closeNotif()" style="margin-top:15px;">TUTUP</button>
+</div>
+
 <div class="bottom-nav">
   <button onclick="goHome()">🏠<br>Home</button>
   <button onclick="goAuto()">⚡<br>Auto</button>
-  <button onclick="loadNotif()">🔔<br>Notif</button>
+  <button onclick="openNotif()">🔔<br>Notif</button>
 </div>
 
 <script>
-const BASE="https://auto-feedback-backend-1.onrender.com";
+const BASE="https://auto-feedback-backend.onrender.com";
 let user="";
 let stopFlag=false;
 
-function showLoading(s){
-  document.getElementById("loading").style.display = s ? "flex" : "none";
+function showLoading(show){
+  document.getElementById("loading").style.display = show ? "flex" : "none";
 }
 
 function toast(msg){
@@ -304,100 +337,99 @@ function showScreen(id){
   document.getElementById(id).classList.add("active");
 }
 
-function log(msg, type="info"){
-  let el = document.getElementById("log");
+function log(msg, type="info", target="log"){
+  let el = document.getElementById(target);
   let cls = "log-" + type;
   el.innerHTML += `<div class="${cls}">• ${msg}</div>`;
   el.scrollTop = el.scrollHeight;
 }
 
-// LOGIN - DENGAN LOADING
+// LOGIN dengan Loading
 async function login(){
   const accountInput = document.getElementById("account").value.trim();
-  if (!accountInput) {
-    toast("Masukkan Account ID");
-    return;
-  }
+  if(!accountInput) return toast("Masukkan Account ID");
 
   user = accountInput;
-
-  showLoading(true);        // ← Loading muncul saat tombol ACCESS diklik
+  showLoading(true);
 
   try {
     let res = await fetch(BASE+"/login",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
-        account: user,
-        password: document.getElementById("password").value
+        account:user,
+        password:document.getElementById("password").value
       })
     });
 
     let data = await res.json();
+    await new Promise(r => setTimeout(r, 800)); // agar loading terlihat
 
-    showLoading(false);       // ← Loading disembunyikan setelah proses selesai
+    showLoading(false);
 
     if(data.success){
       toast("ACCESS GRANTED");
       showScreen("homeScreen");
-      loadTasks();            // Langsung load data setelah login berhasil
+      loadTasks();
     } else {
       toast("ACCESS DENIED");
     }
-  } catch (err) {
+  } catch(err){
     showLoading(false);
     toast("KONEKSI ERROR");
-    console.error(err);
   }
 }
 
-// LOAD TASKS
+// Load Tasks
 async function loadTasks(){
   showLoading(true);
+  try {
+    let res = await fetch(BASE+"/tasks/"+user);
+    let result = await res.json();
+    showLoading(false);
 
-  let res = await fetch(BASE+"/tasks/"+user);
-  let result = await res.json();
-  showLoading(false);
+    let total=0, ready=0, skip=0;
+    let html = "";
 
-  let total=0, ready=0, skip=0;
-  let list = document.getElementById("taskList");
-  list.innerHTML = "";
+    (result.data || []).forEach(t => {
+      total++;
+      let isReady = t.diffDays >= 10;
+      if(isReady) ready++; else skip++;
 
-  (result.data || []).forEach(t => {
-    total++;
-    let isReady = (t.diffDays >= 10);
-    if(isReady) ready++; else skip++;
-
-    list.innerHTML += `
-      <div class="task-card">
-        <div class="task-header">
-          <div class="avatar">👤</div>
-          <div>
-            <b>${t.userName || 'Debitur'}</b><br>
-            <span style="color:#00ff9c; font-size:13px;">● Sedang Diproses [Akulaku]</span>
+      html += `
+        <div class="task-card">
+          <div class="task-header">
+            <div class="avatar">👤</div>
+            <div>
+              <b>${t.userName || 'Debitur'}</b><br>
+              <span style="color:#00ff9c; font-size:13px;">● Sedang Diproses [Akulaku]</span>
+            </div>
           </div>
+          <div class="info-row">
+            <span>Hari sejak feedback</span>
+            <span style="color:\( {isReady?'#00ff9c':'orange'}"> \){t.diffDays||0} hari</span>
+          </div>
+          <div class="tunggakan">Rp ${t.formatDebt || t.tunggakanAmount || '0'}</div>
+          \( {t.dpd ? `<div class="info-row"><span>DPD</span><span> \){t.dpd}</span></div>` : ''}
         </div>
-        <div class="info-row">
-          <span>Hari sejak feedback</span>
-          <span style="color:\( {isReady ? '#00ff9c' : 'orange'}"> \){t.diffDays || 0} hari</span>
-        </div>
-        <div class="tunggakan">
-          Rp ${t.formatDebt || t.tunggakanAmount || '0'}
-        </div>
-        \( {t.dpd ? `<div class="info-row"><span>DPD</span><span> \){t.dpd}</span></div>` : ''}
-      </div>
-    `;
-  });
+      `;
+    });
 
-  document.getElementById("total").innerText = total;
-  document.getElementById("ready").innerText = ready;
-  document.getElementById("skip").innerText = skip;
+    document.getElementById("taskList").innerHTML = html || "<p style='text-align:center;color:#666;padding:20px;'>Tidak ada task</p>";
+
+    document.getElementById("total").innerText = total;
+    document.getElementById("ready").innerText = ready;
+    document.getElementById("skip").innerText = skip;
+  } catch(e){
+    showLoading(false);
+  }
 }
 
 // AUTO FEEDBACK
 async function startAuto(){
   stopFlag = false;
   showScreen("autoScreen");
+  document.getElementById("log").innerHTML = "";
   log("Auto Feedback Protocol Started", "info");
 
   showLoading(true);
@@ -414,14 +446,14 @@ async function startAuto(){
 
   for(let t of tasks){
     if(stopFlag){
-      log("Process dihentikan", "error");
+      log("Process dihentikan oleh user", "error");
       break;
     }
 
     log(`Memeriksa \( {t.userName} ( \){t.diffDays} hari)`, "info");
 
     if((t.diffDays || 0) < 10){
-      log("Diskip - Belum 10 hari", "skip");
+      log("Diskip - Belum mencapai 10 hari", "skip");
       continue;
     }
 
@@ -433,12 +465,11 @@ async function startAuto(){
     document.getElementById("progressText").innerText = `${done} / ${total}`;
     document.getElementById("progressFill").style.width = percent + "%";
 
-    log(`✅ Feedback terkirim ke ${t.userName}`, "success");
+    log(`✅ Feedback berhasil dikirim ke ${t.userName}`, "success");
 
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  document.getElementById("done").innerText = done;
   log("Auto Feedback selesai dijalankan", "success");
   toast("AUTO FEEDBACK SELESAI");
 }
@@ -448,14 +479,19 @@ function stopAuto(){
   toast("PROCESS STOPPED");
 }
 
+// Notif Sidebar
+function openNotif(){
+  document.getElementById("notifSidebar").classList.add("active");
+  // Copy log dari auto ke notif sidebar
+  document.getElementById("notifLog").innerHTML = document.getElementById("log").innerHTML;
+}
+
+function closeNotif(){
+  document.getElementById("notifSidebar").classList.remove("active");
+}
+
 function goHome(){ showScreen("homeScreen"); }
 function goAuto(){ showScreen("autoScreen"); }
-
-async function loadNotif(){
-  let res = await fetch(BASE+"/notif/"+user);
-  let data = await res.json();
-  toast(`Notifikasi: ${data.data ? data.data.length : 0}`);
-}
 </script>
 
 </body>
