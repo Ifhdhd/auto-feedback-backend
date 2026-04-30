@@ -10,25 +10,29 @@
       font-family: Arial;
       background: #05070f;
       color: white;
+      overflow: hidden; /* 🔥 STOP SCROLL GLOBAL */
     }
 
+    /* 🔥 SEMUA SCREEN FULL FIXED */
     .screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       display: none;
-      height: 100vh;
-      overflow: hidden;
     }
 
     .active {
       display: block;
     }
 
-    /* LOGIN FULL SCREEN */
+    /* LOGIN */
     .login-screen {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      background: radial-gradient(circle at center, #0b1120, #05070f);
+      background: radial-gradient(circle, #0b1120, #05070f);
     }
 
     .login-box {
@@ -38,14 +42,7 @@
       padding: 25px;
       border-radius: 15px;
       backdrop-filter: blur(10px);
-      box-shadow: 0 0 30px rgba(255,0,0,0.3);
-    }
-
-    .header {
-      text-align: center;
-      font-size: 20px;
-      margin-bottom: 20px;
-      color: red;
+      box-shadow: 0 0 25px rgba(255,0,0,0.4);
     }
 
     input {
@@ -69,17 +66,17 @@
       font-weight: bold;
     }
 
-    /* APP SCREEN */
-    .app-screen {
-      height: 100vh;
+    /* APP */
+    .app {
       display: flex;
       flex-direction: column;
+      height: 100%;
     }
 
     .content {
       flex: 1;
-      overflow: auto;
-      padding: 20px;
+      overflow-y: auto; /* 🔥 SCROLL HANYA DI SINI */
+      padding: 15px;
       padding-bottom: 80px;
     }
 
@@ -103,15 +100,15 @@
     }
 
     /* NAV */
-    .bottom-nav {
-      position: fixed;
+    .nav {
+      position: absolute;
       bottom: 0;
       width: 100%;
       background: #0b1120;
       display: flex;
     }
 
-    .bottom-nav button {
+    .nav button {
       flex: 1;
       background: none;
       color: white;
@@ -147,28 +144,21 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* DRAWER LOG */
+    /* DRAWER */
     .drawer {
       position: fixed;
       top: 0;
       right: -100%;
-      width: 85%;
+      width: 80%;
       height: 100%;
       background: #0b1120;
-      transition: 0.4s;
+      transition: 0.3s;
       z-index: 1000;
-      overflow: auto;
+      overflow-y: auto;
     }
 
     .drawer.open {
       right: 0;
-    }
-
-    .drawer-header {
-      padding: 15px;
-      border-bottom: 1px solid #222;
-      display: flex;
-      justify-content: space-between;
     }
 
     .log-item {
@@ -191,10 +181,10 @@
   <div class="spinner"></div>
 </div>
 
-<!-- LOGIN ONLY -->
+<!-- LOGIN -->
 <div id="loginScreen" class="screen active login-screen">
   <div class="login-box">
-    <div class="header">SYSTEM LOGIN</div>
+    <h3 style="text-align:center;color:red;">LOGIN</h3>
 
     <input id="account" placeholder="No HP">
     <input id="password" type="password" placeholder="Password">
@@ -203,36 +193,37 @@
   </div>
 </div>
 
-<!-- MAIN APP -->
-<div id="appScreen" class="screen app-screen">
+<!-- APP -->
+<div id="appScreen" class="screen">
+  <div class="app">
 
-  <div class="content" id="homePage">
-    <h3>DASHBOARD</h3>
-    <button onclick="loadTasks()">LOAD TASK</button>
-    <div id="taskList"></div>
+    <!-- HOME -->
+    <div id="homePage" class="content">
+      <h3>DASHBOARD</h3>
+      <button onclick="loadTasks()">LOAD TASK</button>
+      <div id="taskList"></div>
+    </div>
+
+    <!-- AUTO -->
+    <div id="autoPage" class="content" style="display:none;">
+      <h3>AUTO</h3>
+      <button onclick="startAuto()">START AUTO</button>
+      <div id="successList"></div>
+    </div>
+
+    <!-- NAV -->
+    <div class="nav">
+      <button onclick="goHome()">🏠<br>Home</button>
+      <button onclick="goAuto()">⚡<br>Auto</button>
+      <button onclick="openDrawer()">📋<br>Log</button>
+    </div>
+
   </div>
-
-  <div class="content" id="autoPage" style="display:none;">
-    <h3>AUTO FEEDBACK</h3>
-    <button onclick="startAuto()">START AUTO</button>
-    <div id="successList"></div>
-  </div>
-
 </div>
 
-<!-- NAV -->
-<div id="nav" class="bottom-nav" style="display:none;">
-  <button onclick="goHome()">🏠<br>Home</button>
-  <button onclick="goAuto()">⚡<br>Auto</button>
-  <button onclick="openDrawer()">📋<br>Log</button>
-</div>
-
-<!-- LOG DRAWER -->
+<!-- DRAWER -->
 <div id="drawer" class="drawer">
-  <div class="drawer-header">
-    <span>LOG</span>
-    <button onclick="closeDrawer()">X</button>
-  </div>
+  <button onclick="closeDrawer()" style="margin:10px;">Tutup</button>
   <div id="logContainer"></div>
 </div>
 
@@ -241,18 +232,13 @@
 const BASE = "https://auto-feedback-backend-1.onrender.com";
 let user = "";
 
-// LOADING
-function showLoading(s){
-  document.getElementById("loading").style.display = s ? "flex" : "none";
-}
-
 // LOGIN
 async function login(){
   user = document.getElementById("account").value;
 
   showLoading(true);
 
-  const res = await fetch(BASE + "/login",{
+  const res = await fetch(BASE+"/login",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({
@@ -265,9 +251,8 @@ async function login(){
   showLoading(false);
 
   if(data.success){
-    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("loginScreen").classList.remove("active");
     document.getElementById("appScreen").classList.add("active");
-    document.getElementById("nav").style.display = "flex";
     addLog("Login sukses","success");
   } else {
     addLog("Login gagal","error");
@@ -276,7 +261,7 @@ async function login(){
 
 // TASK
 async function loadTasks(){
-  const res = await fetch(BASE + "/tasks/" + user);
+  const res = await fetch(BASE+"/tasks/"+user);
   const data = await res.json();
 
   const list = document.getElementById("taskList");
@@ -300,25 +285,22 @@ async function loadTasks(){
 
 // AUTO
 async function startAuto(){
-  const res = await fetch(BASE + "/tasks/" + user);
+  const res = await fetch(BASE+"/tasks/"+user);
   const data = await res.json();
 
   for(let t of data.data){
-
     if((t.diffDays||0) < 10){
       addLog("Skip "+t.userName,"skip");
       continue;
     }
 
-    await fetch(BASE + "/auto-feedback/" + user);
+    await fetch(BASE+"/auto-feedback/"+user);
     addLog("Success "+t.userName,"success");
 
     document.getElementById("successList").innerHTML += `
       <div class="card">✔ ${t.userName}</div>
     `;
   }
-
-  addLog("Auto selesai","info");
 }
 
 // LOG
@@ -345,6 +327,11 @@ function openDrawer(){
 }
 function closeDrawer(){
   document.getElementById("drawer").classList.remove("open");
+}
+
+// LOADING
+function showLoading(s){
+  document.getElementById("loading").style.display = s ? "flex" : "none";
 }
 
 </script>
