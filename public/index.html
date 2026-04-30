@@ -12,7 +12,6 @@ body{
   background:#02040a;
 }
 
-/* GRID BACKGROUND */
 body::before{
   content:"";
   position:fixed;
@@ -25,13 +24,10 @@ body::before{
   pointer-events:none;
 }
 
-/* SCREEN */
 .screen{display:none;height:100vh;overflow:auto;}
 .active{display:block;}
-
 .container{padding:15px;padding-bottom:100px;}
 
-/* HUD PANEL */
 .panel{
   background:rgba(10,15,30,0.6);
   backdrop-filter:blur(10px);
@@ -42,7 +38,6 @@ body::before{
   box-shadow:0 0 15px rgba(255,0,0,0.2);
 }
 
-/* HEADER */
 .header{
   color:red;
   text-shadow:0 0 10px red;
@@ -51,7 +46,6 @@ body::before{
   padding-bottom:5px;
 }
 
-/* BUTTON */
 button{
   width:100%;
   padding:12px;
@@ -69,7 +63,6 @@ button{
   box-shadow:0 0 5px #333;
 }
 
-/* INPUT */
 input{
   width:100%;
   padding:12px;
@@ -80,7 +73,6 @@ input{
   color:white;
 }
 
-/* STATS */
 .stats{
   display:flex;
   gap:10px;
@@ -100,19 +92,12 @@ input{
   color:red;
 }
 
-/* TASK CARD */
 .card{
   background:rgba(0,0,0,0.4);
   padding:10px;
   border-radius:10px;
   margin-bottom:8px;
   border:1px solid rgba(255,0,0,0.2);
-  transition:0.2s;
-}
-
-.card:hover{
-  box-shadow:0 0 15px red;
-  transform:translateY(-2px);
 }
 
 .dot{
@@ -121,7 +106,6 @@ input{
   box-shadow:0 0 6px currentColor;
 }
 
-/* PROGRESS */
 .progress-bar{
   height:10px;
   background:#111;
@@ -137,7 +121,6 @@ input{
   background:linear-gradient(90deg, red, orange);
 }
 
-/* SCAN */
 .progress-bar::after{
   content:"";
   position:absolute;
@@ -150,7 +133,6 @@ input{
 
 @keyframes scan{100%{left:100%;}}
 
-/* NAV */
 .bottom-nav{
   position:fixed;
   bottom:0;
@@ -168,7 +150,6 @@ input{
   box-shadow:none;
 }
 
-/* LOADING */
 .loading{
   position:fixed;
   width:100%;height:100%;
@@ -188,7 +169,6 @@ input{
 
 @keyframes spin{100%{transform:rotate(360deg);}}
 
-/* TOAST */
 .toast{
   position:fixed;
   bottom:80px;
@@ -200,7 +180,6 @@ input{
   border:1px solid red;
   display:none;
 }
-
 </style>
 </head>
 
@@ -209,7 +188,6 @@ input{
 <div id="loading" class="loading"><div class="spinner"></div></div>
 <div id="toast" class="toast"></div>
 
-<!-- LOGIN -->
 <div id="loginScreen" class="screen active">
   <div class="container">
     <div class="panel">
@@ -221,32 +199,29 @@ input{
   </div>
 </div>
 
-<!-- HOME -->
 <div id="homeScreen" class="screen">
   <div class="container">
-
     <div class="panel">
       <div class="header">SYSTEM STATUS</div>
-
       <div class="stats">
         <div class="stat"><b id="total">0</b><br>Total</div>
         <div class="stat"><b id="ready">0</b><br>Ready</div>
         <div class="stat"><b id="skip">0</b><br>Skip</div>
         <div class="stat"><b id="done">0</b><br>Done</div>
       </div>
-
       <button onclick="loadTasks()">LOAD DATA</button>
     </div>
 
-    <div id="taskList"></div>
+    <div class="panel">
+      <button onclick="startAuto()">START AUTO</button>
+    </div>
 
+    <div id="taskList"></div>
   </div>
 </div>
 
-<!-- AUTO -->
 <div id="autoScreen" class="screen">
   <div class="container">
-
     <div class="panel">
       <div class="header">AUTO EXECUTION</div>
 
@@ -260,7 +235,6 @@ input{
     </div>
 
     <div id="successList"></div>
-
   </div>
 </div>
 
@@ -356,25 +330,34 @@ async function loadTasks(){
   document.getElementById("skip").innerText=skip;
 }
 
-// AUTO
+// AUTO (FIXED)
 async function startAuto(){
+
   stopFlag=false;
+
+  showScreen("autoScreen");
+  showLoading(true);
 
   let res=await fetch(BASE+"/tasks/"+user);
   let data=await res.json();
+
+  showLoading(false);
 
   let tasks=data.data||[];
   let total=tasks.length;
   let done=0;
 
+  document.getElementById("successList").innerHTML="";
+
   for(let t of tasks){
 
     if(stopFlag) break;
-    if(t.diffDays<10) continue;
+    if((t.diffDays||0)<10) continue;
 
     await fetch(BASE+"/auto-feedback/"+user);
 
     done++;
+
     let percent=(done/total)*100;
 
     document.getElementById("progressText").innerText=done+" / "+total;
@@ -383,13 +366,16 @@ async function startAuto(){
     document.getElementById("successList").innerHTML+=`
       <div class="card">
         ✔ ${t.userName}
+        <div>${t.diffDays} hari</div>
       </div>
     `;
 
     await new Promise(r=>setTimeout(r,1000));
   }
 
-  toast("DONE");
+  document.getElementById("done").innerText=done;
+
+  toast("AUTO SELESAI");
 }
 
 function stopAuto(){
@@ -397,11 +383,9 @@ function stopAuto(){
   toast("STOPPED");
 }
 
-// NAV
 function goHome(){showScreen("homeScreen");}
 function goAuto(){showScreen("autoScreen");}
 
-// NOTIF
 async function loadNotif(){
   let res=await fetch(BASE+"/notif/"+user);
   let data=await res.json();
