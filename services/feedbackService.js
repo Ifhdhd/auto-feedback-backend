@@ -12,7 +12,7 @@ async function getCaseRecords(
     {
       actionType: 3,
       pageNo: 1,
-      pageSize: 20,
+      pageSize: 50,
       taskId: String(taskId)
     },
 
@@ -58,15 +58,19 @@ async function getCaseRecords(
 //
 // FORMAT TANGGAL
 //
-function formatDate(time) {
+function formatDate(timestamp){
 
-  const d = new Date(time);
+  if(!timestamp){
+    return "-";
+  }
+
+  const d = new Date(Number(timestamp));
 
   const day =
-    String(d.getDate()).padStart(2, "0");
+    String(d.getDate()).padStart(2,"0");
 
   const month =
-    String(d.getMonth() + 1).padStart(2, "0");
+    String(d.getMonth() + 1).padStart(2,"0");
 
   const year =
     d.getFullYear();
@@ -91,8 +95,29 @@ async function enrichTask(
         task.id || task.taskId
       );
 
-    let rows =
-      result.data?.data || [];
+    console.log("==========");
+    console.log("USER:", task.userName);
+    console.log("RAW RESULT:");
+    console.log(JSON.stringify(result));
+
+    //
+    // AMBIL ARRAY YANG BENAR
+    //
+    let rows = [];
+
+    if(Array.isArray(result.data)){
+      rows = result.data;
+    }
+
+    else if(Array.isArray(result.data?.data)){
+      rows = result.data.data;
+    }
+
+    else if(Array.isArray(result.rows)){
+      rows = result.rows;
+    }
+
+    console.log("TOTAL RECORD:", rows.length);
 
     //
     // BELUM ADA FEEDBACK
@@ -101,51 +126,72 @@ async function enrichTask(
 
       task.diffDays = 999;
 
-      task.lastFeedbackText =
-        "Belum pernah feedback";
-
       task.lastFeedbackDate =
-        "-";
+        "Belum pernah feedback";
 
       return task;
 
     }
 
     //
-    // URUTKAN TERBARU
+    // SORT TERBARU
     //
     rows.sort((a, b) => {
 
       return (
-        Number(b.createTime || 0) -
-        Number(a.createTime || 0)
+        Number(
+          b.createTime ||
+          b.gmtCreate ||
+          0
+        ) -
+        Number(
+          a.createTime ||
+          a.gmtCreate ||
+          0
+        )
       );
 
     });
 
-    //
-    // FEEDBACK TERBARU
-    //
     const latest =
       rows[0];
 
-    let lastTime =
-      Number(latest.createTime);
+    console.log("LATEST:");
+    console.log(latest);
 
     //
-    // FIX TIMESTAMP
+    // AMBIL TIMESTAMP
     //
-    if (
-      String(lastTime).length === 10
-    ) {
+    const lastTime =
+      Number(
+        latest.createTime ||
+        latest.gmtCreate ||
+        0
+      );
 
-      lastTime =
-        lastTime * 1000;
+    console.log(
+      "LAST TIME:",
+      lastTime
+    );
+
+    //
+    // JIKA TIMESTAMP INVALID
+    //
+    if(!lastTime){
+
+      task.diffDays = 999;
+
+      task.lastFeedbackDate =
+        "Tanggal tidak ditemukan";
+
+      return task;
 
     }
 
-    const now =
-      Date.now();
+    //
+    // HITUNG SELISIH HARI
+    //
+    const now = Date.now();
 
     const diffMs =
       now - lastTime;
@@ -172,21 +218,8 @@ async function enrichTask(
     task.lastFeedbackDate =
       formatDate(lastTime);
 
-    task.lastFeedbackText =
-      `${task.diffDays} hari sejak feedback terakhir`;
-
     console.log(
-      "USER:",
-      task.userName
-    );
-
-    console.log(
-      "LAST:",
-      task.lastFeedbackDate
-    );
-
-    console.log(
-      "DIFF:",
+      "DIFF DAYS:",
       task.diffDays
     );
 
@@ -202,10 +235,18 @@ async function enrichTask(
       err.message
     );
 
+    if(err.response){
+      console.log(
+        JSON.stringify(
+          err.response.data
+        )
+      );
+    }
+
     task.diffDays = 999;
 
     task.lastFeedbackDate =
-      "-";
+      "Error ambil feedback";
 
     return task;
 
@@ -227,11 +268,17 @@ async function checkTasks(user) {
       task
     );
 
+    console.log(
+      "CHECK:",
+      task.userName,
+      task.diffDays
+    );
+
     //
     // BELUM 10 HARI
     //
     if (
-      (task.diffDays || 0) < 10
+      Number(task.diffDays || 0) < 10
     ) {
       continue;
     }
@@ -318,6 +365,14 @@ async function checkTasks(user) {
       console.log(
         err.message
       );
+
+      if(err.response){
+        console.log(
+          JSON.stringify(
+            err.response.data
+          )
+        );
+      }
 
     }
 
