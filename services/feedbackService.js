@@ -3,88 +3,38 @@ const { addNotif } = require("./notifStore");
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-//
-// AMBIL RIWAYAT FEEDBACK
-//
+// ambil riwayat feedback
 async function getRecords(cookies, taskId) {
-
   try {
-
     const res = await axios.post(
-
       "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
-
       {
         actionType: 3,
         pageNo: 1,
-        pageSize: 20,
+        pageSize: 5,
         taskId
       },
-
       {
-        headers: {
-
-          Cookie: cookies,
-
-          "Content-Type":
-            "application/json",
-
-          deviceId:
-            "ffffffff-a665-1a66-0000-0000748ca5f0",
-
-          deviceModel:
-            "5030U",
-
-          osVersion:
-            "10",
-
-          versionCode:
-            "300",
-
-          versionName:
-            "2.7.9-release",
-
-          countryCode:
-            "ID",
-
-          timeZoneId:
-            "Asia/Jakarta"
-        }
+        headers: { Cookie: cookies }
       }
-
     );
 
     return res.data?.data?.data || [];
-
   } catch (err) {
-
-    console.log(
-      "getRecords error:",
-      err.message
-    );
-
+    console.log("getRecords error:", err.message);
     return [];
-
   }
-
 }
 
-//
-// KIRIM FEEDBACK
-//
+// kirim feedback
 async function sendFeedback(cookies, task) {
-
   try {
-
     await axios.post(
-
       "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
-
       {
         actionResultId: 166,
         actionResultSerialNo: "X0019",
-        addressId:
-          task.addressBo?.addressId || 0,
+        addressId: task.addressBo?.addressId || 0,
         assistTaskType: 0,
         createTime: Date.now(),
         feedbackType: "X0019",
@@ -94,224 +44,76 @@ async function sendFeedback(cookies, task) {
         remark: "",
         taskId: Number(task.id)
       },
-
       {
-        headers: {
-
-          Cookie: cookies,
-
-          "Content-Type":
-            "application/json",
-
-          deviceId:
-            "ffffffff-a665-1a66-0000-0000748ca5f0",
-
-          deviceModel:
-            "5030U",
-
-          osVersion:
-            "10",
-
-          versionCode:
-            "300",
-
-          versionName:
-            "2.7.9-release",
-
-          countryCode:
-            "ID",
-
-          timeZoneId:
-            "Asia/Jakarta"
-        }
+        headers: { Cookie: cookies }
       }
-
     );
 
     return true;
-
   } catch (err) {
-
-    console.log(
-      "sendFeedback error:",
-      err.message
-    );
-
+    console.log("sendFeedback error:", err.message);
     return false;
-
   }
-
 }
 
-//
-// HITUNG FEEDBACK TERAKHIR
-//
+// hitung selisih hari dari feedback terakhir
 async function enrichTask(user, task) {
+  const records = await getRecords(user.cookies, task.id);
 
-  try {
+  const valid = records
+    .filter(r => r.actionReferId == 166)
+    .sort((a, b) => Number(b.createTime) - Number(a.createTime));
 
-    const records =
-      await getRecords(
-        user.cookies,
-        task.id
-      );
-
-    const valid =
-      records
-        .filter(
-          r =>
-            r.actionReferId == 166
-        )
-        .sort((a, b) =>
-          Number(b.createTime) -
-          Number(a.createTime)
-        );
-
-    //
-    // BELUM ADA FEEDBACK
-    //
-    if (!valid.length) {
-
-      task.diffDays = 999;
-
-      task.lastFeedbackDate =
-        "Belum pernah feedback";
-
-      return task;
-
-    }
-
-    const latest =
-      valid[0];
-
-    const lastTime =
-      Number(latest.createTime);
-
-    //
-    // FORMAT TANGGAL
-    //
-    const date =
-      new Date(lastTime);
-
-    const formatted =
-      date.toLocaleString(
-        "id-ID",
-        {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        }
-      );
-
-    //
-    // HITUNG SELISIH HARI
-    //
-    const diffMs =
-      Date.now() - lastTime;
-
-    const diffDays =
-      Math.floor(
-        diffMs / 86400000
-      );
-
-    task.diffDays =
-      diffDays;
-
-    task.lastFeedbackDate =
-      formatted;
-
+  if (!valid.length) {
+    task.diffDays = 999; // belum pernah → anggap siap
     return task;
-
-  } catch (err) {
-
-    console.log(
-      "enrichTask error:",
-      err.message
-    );
-
-    task.diffDays = 999;
-
-    task.lastFeedbackDate =
-      "Error";
-
-    return task;
-
   }
 
+  const latest = valid[0];
+
+  const diffDays =
+    (Date.now() - Number(latest.createTime)) / 86400000;
+
+  task.diffDays = Math.floor(diffDays);
+
+  return task;
 }
 
-//
 // AUTO FEEDBACK
-//
 async function checkTasks(user) {
-
   let sentCount = 0;
 
   for (let t of user.tasks) {
-
     try {
+      if (t.sent) continue;
 
-      //
-      // UPDATE INFO TERBARU
-      //
       await enrichTask(user, t);
 
-      //
-      // KIRIM FEEDBACK TANPA BATAS HARI
-      //
-      const ok =
-        await sendFeedback(
-          user.cookies,
-          t
-        );
+      // 🔥 RULE FINAL
+      if (t.diffDays < 10) continue;
+
+      const ok = await sendFeedback(user.cookies, t);
 
       if (ok) {
-
+        t.sent = true;
         sentCount++;
 
         addNotif(
-
           user.account,
-
-          `✔ ${t.userName}
-${t.diffDays} hari
-${t.lastFeedbackDate}`
-
+          `✔ ${t.userName} (${t.diffDays} hari)`
         );
 
-        console.log(
-          "SUCCESS:",
-          t.userName
-        );
-
+        console.log("SUCCESS:", t.userName, t.diffDays);
       }
 
       await sleep(800);
 
     } catch (err) {
-
-      console.log(
-        "error task:",
-        err.message
-      );
-
+      console.log("error task:", err.message);
     }
-
   }
 
-  console.log(
-    "TOTAL TERKIRIM:",
-    sentCount
-  );
-
+  console.log("TOTAL TERKIRIM:", sentCount);
 }
 
-module.exports = {
-
-  checkTasks,
-
-  enrichTask
-
-};
+module.exports = { checkTasks, enrichTask };
