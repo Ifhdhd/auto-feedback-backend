@@ -408,37 +408,114 @@ async function loadTasks(){
       return;
     }
 
+    // kalau kosong
+    if(!data.data.length){
+
+      list.innerHTML = `
+        <div class="card">
+          Tidak ada data
+        </div>
+      `;
+
+      showLoading(false);
+
+      return;
+    }
+
     data.data.forEach(t=>{
 
       const diff =
         Number(t.diffDays || 0);
 
-      const color =
-        diff >= 10
-        ? "red"
-        : "green";
+      // 🔥 WARNA STATUS
+      let color = "green";
+
+      if(diff >= 10){
+        color = "red";
+      }
+
+      // 🔥 STATUS TEXT
+      let statusText =
+        "Belum waktunya feedback";
+
+      if(diff >= 10){
+        statusText =
+          "Siap feedback";
+      }
+
+      // 🔥 FEEDBACK TERAKHIR
+      const lastFeedback =
+        t.lastFeedbackText ||
+        "Belum pernah";
 
       list.innerHTML += `
 
         <div class="card">
 
-          <div class="row">
+          <div class="row"
+               style="
+                 margin-top:10px;
+                 display:flex;
+                 align-items:center;
+                 gap:10px;
+               ">
 
             <div class="dot"
-                 style="background:${color}">
+                 style="
+                   width:12px;
+                   height:12px;
+                   border-radius:50%;
+                   background:${color};
+                 ">
             </div>
 
-            <b>${t.userName || "-"}</b>
+            <b style="font-size:16px">
+              ${t.userName || "-"}
+            </b>
 
           </div>
 
-          <div>
+          <div style="
+            margin-top:8px;
+            opacity:.8;
+          ">
+            ${t.phoneNumber || "-"}
+          </div>
+
+          <div style="
+            margin-top:10px;
+            font-weight:bold;
+            color:${color};
+          ">
             ${diff} hari sejak feedback terakhir
           </div>
 
-          <div class="date">
+          <div class="date"
+               style="
+                 margin-top:8px;
+                 opacity:.8;
+                 font-size:13px;
+               ">
+
             Feedback terakhir:
-            ${t.lastFeedbackDate || "-"}
+            <br>
+
+            <b>
+              ${lastFeedback}
+            </b>
+
+          </div>
+
+          <div style="
+            margin-top:12px;
+            padding:8px;
+            border-radius:8px;
+            background:${color};
+            color:white;
+            text-align:center;
+            font-weight:bold;
+          ">
+            ${statusText}
           </div>
 
         </div>
@@ -448,6 +525,8 @@ async function loadTasks(){
     });
 
   }catch(err){
+
+    console.log(err);
 
     toast("Load task gagal");
 
