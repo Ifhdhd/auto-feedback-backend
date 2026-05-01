@@ -1,86 +1,82 @@
 const axios = require("axios");
-const { addNotif } = require("./notifStore");
 
-//
-// HITUNG SELISIH HARI
-//
-function getDiffDays(lastTime) {
+async function getCaseRecords(cookies, taskId) {
 
-  if (!lastTime) return 999;
+  const res = await axios.post(
+    "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
+    {
+      actionType: 3,
+      pageNo: 1,
+      pageSize: 5,
+      taskId: String(taskId)
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
 
-  const now = Date.now();
+        "Cookie": cookies,
 
-  const diff =
-    now - Number(lastTime);
-
-  return Math.floor(
-    diff / (1000 * 60 * 60 * 24)
-  );
-}
-
-//
-// AMBIL HISTORY FEEDBACK
-//
-async function getRecord(user, taskId) {
-
-  try {
-
-    const res = await axios.post(
-      "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
-      {
-        actionType: 3,
-        pageNo: 1,
-        pageSize: 1,
-        taskId: String(taskId)
-      },
-      {
-        headers: {
-          Cookie: user.cookies,
-          "Content-Type": "application/json"
-        }
+        "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+        "deviceModel": "5030U",
+        "osVersion": "10",
+        "versionCode": "300",
+        "versionName": "2.7.9-release",
+        "countryCode": "ID",
+        "timeZoneId": "Asia/Jakarta"
       }
-    );
+    }
+  );
 
-    return res.data;
-
-  } catch (err) {
-
-    return null;
-
-  }
-
+  return res.data;
 }
 
 //
-// ENRICH TASK
+// HITUNG HARI SEJAK FEEDBACK TERAKHIR
 //
 async function enrichTask(user, task) {
 
   try {
 
-    const record =
-      await getRecord(user, task.taskId);
+    const result =
+      await getCaseRecords(
+        user.cookies,
+        task.id || task.taskId
+      );
 
-    let diffDays = 999;
+    const rows =
+      result.data?.data || [];
 
-    if (
-      record &&
-      record.data &&
-      record.data.data &&
-      record.data.data.length > 0
-    ) {
+    if (rows.length <= 0) {
 
-      const latest =
-        record.data.data[0];
+      task.diffDays = 999;
 
-      diffDays =
-        getDiffDays(
-          latest.createTime
-        );
+      return task;
 
     }
 
-    task.diffDays = diffDays;
+    // ambil feedback terbaru
+    const latest = rows[0];
+
+    const lastTime =
+      Number(latest.createTime);
+
+    const now =
+      Date.now();
+
+    const diffMs =
+      now - lastTime;
+
+    const diffDays =
+      Math.floor(
+        diffMs / (1000 * 60 * 60 * 24)
+      );
+
+    task.lastFeedbackTime = lastTime;
+
+    task.diffDays =
+      diffDays < 0
+      ? 0
+      : diffDays;
 
     return task;
 
@@ -97,112 +93,65 @@ async function enrichTask(user, task) {
 //
 // AUTO FEEDBACK
 //
-async function sendFeedback(user, taskId) {
-
-  try {
-
-    const res = await axios.post(
-      "https://ez-co-app.tin.group/app/offline/task/case/record/addCaseRecord",
-      {
-        taskId: String(taskId),
-        actionType: 3,
-        actionReferId: "166",
-        actionReferDesc: "Sementara tidak ada uang"
-      },
-      {
-        headers: {
-          Cookie: user.cookies,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-
-    return res.data;
-
-  } catch (err) {
-
-    return null;
-
-  }
-
-}
-
-//
-// CHECK TASKS
-//
 async function checkTasks(user) {
 
-  const result = [];
+  const success = [];
 
-  if (!user.tasks) {
-    return result;
-  }
+  for (let task of user.tasks) {
 
-  for (const task of user.tasks) {
+    await enrichTask(user, task);
+
+    // hanya feedback jika >=10 hari
+    if ((task.diffDays || 0) < 10) {
+      continue;
+    }
+
+    if (task.sent) {
+      continue;
+    }
 
     try {
 
-      const enriched =
-        await enrichTask(user, task);
+      await axios.post(
+        "https://ez-co-app.tin.group/app/offline/task/case/record/save",
+        {
+          taskId: String(task.id || task.taskId),
+          actionType: 3,
+          actionReferId: 166,
+          actionFlagType: 2,
+          actionComment: ""
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
 
-      //
-      // BELUM 10 HARI
-      //
-      if ((enriched.diffDays || 0) < 10) {
+            "Cookie": user.cookies,
 
-        result.push({
-          userName: task.userName,
-          status: "skip",
-          diffDays: enriched.diffDays
-        });
+            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
+            "deviceModel": "5030U",
+            "osVersion": "10",
+            "versionCode": "300",
+            "versionName": "2.7.9-release",
+            "countryCode": "ID",
+            "timeZoneId": "Asia/Jakarta"
+          }
+        }
+      );
 
-        continue;
-      }
+      task.sent = true;
 
-      //
-      // FEEDBACK
-      //
-      const fb =
-        await sendFeedback(
-          user,
-          task.taskId
-        );
-
-      if (fb && fb.success) {
-
-        addNotif(
-          user.account,
-          "Feedback berhasil: " +
-          task.userName
-        );
-
-        result.push({
-          userName: task.userName,
-          status: "success"
-        });
-
-      } else {
-
-        result.push({
-          userName: task.userName,
-          status: "failed"
-        });
-
-      }
+      success.push(task);
 
     } catch (err) {
 
-      result.push({
-        userName: task.userName,
-        status: "error",
-        error: err.message
-      });
+      console.log(err.message);
 
     }
 
   }
 
-  return result;
+  return success;
+
 }
 
 module.exports = {
