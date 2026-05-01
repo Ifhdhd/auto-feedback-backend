@@ -134,6 +134,12 @@
       z-index:999;
     }
 
+    .date{
+      color:#9ca3af;
+      font-size:13px;
+      margin-top:5px;
+    }
+
   </style>
 
 </head>
@@ -405,7 +411,7 @@ async function loadTasks(){
     data.data.forEach(t=>{
 
       const diff =
-        t.diffDays || 0;
+        Number(t.diffDays || 0);
 
       const color =
         diff >= 10
@@ -428,6 +434,11 @@ async function loadTasks(){
 
           <div>
             ${diff} hari sejak feedback terakhir
+          </div>
+
+          <div class="date">
+            Feedback terakhir:
+            ${t.lastFeedbackDate || "-"}
           </div>
 
         </div>
@@ -479,7 +490,9 @@ async function startAuto(){
 
     for(let t of tasks){
 
-      if((t.diffDays || 0) < 10){
+      if(
+        Number(t.diffDays || 0) < 10
+      ){
         continue;
       }
 
