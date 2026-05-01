@@ -1,8 +1,5 @@
 const axios = require("axios");
 
-//
-// GET RIWAYAT FEEDBACK
-//
 async function getCaseRecords(
   cookies,
   taskId
@@ -15,7 +12,7 @@ async function getCaseRecords(
     {
       actionType: 3,
       pageNo: 1,
-      pageSize: 5,
+      pageSize: 20,
       taskId: String(taskId)
     },
 
@@ -74,7 +71,7 @@ async function enrichTask(
         task.id || task.taskId
       );
 
-    const rows =
+    let rows =
       result.data?.data || [];
 
     //
@@ -92,32 +89,43 @@ async function enrichTask(
     }
 
     //
-    // AMBIL FEEDBACK TERBARU
+    // URUTKAN BERDASARKAN createTime TERBARU
+    //
+    rows.sort((a, b) => {
+
+      return (
+        Number(b.createTime || 0) -
+        Number(a.createTime || 0)
+      );
+
+    });
+
+    //
+    // FEEDBACK TERBARU
     //
     const latest =
       rows[0];
 
-    //
-    // TIMESTAMP API
-    //
     const lastTime =
       Number(latest.createTime);
 
     //
-    // WAKTU SEKARANG
+    // DEBUG
     //
+    console.log("TASK:");
+    console.log(task.userName);
+
+    console.log("LAST FEEDBACK:");
+    console.log(
+      new Date(lastTime)
+    );
+
     const now =
       Date.now();
 
-    //
-    // SELISIH MILLISECOND
-    //
     const diffMs =
       now - lastTime;
 
-    //
-    // KONVERSI KE HARI
-    //
     const diffDays =
       Math.floor(
         diffMs /
@@ -129,30 +137,8 @@ async function enrichTask(
         )
       );
 
-    //
-    // FORMAT TANGGAL
-    //
-    const date =
-      new Date(lastTime);
-
-    const tanggal =
-      date.toLocaleDateString(
-        "id-ID",
-        {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric"
-        }
-      );
-
-    //
-    // SIMPAN
-    //
     task.lastFeedbackTime =
       lastTime;
-
-    task.lastFeedbackDate =
-      tanggal;
 
     task.diffDays =
       diffDays < 0
@@ -176,9 +162,6 @@ async function enrichTask(
 
     task.diffDays = 999;
 
-    task.lastFeedbackText =
-      "Gagal cek feedback";
-
     return task;
 
   }
@@ -194,16 +177,13 @@ async function checkTasks(user) {
 
   for (let task of user.tasks) {
 
-    //
-    // UPDATE DIFF DAYS DULU
-    //
     await enrichTask(
       user,
       task
     );
 
     //
-    // BELUM 10 HARI
+    // JIKA BELUM 10 HARI
     //
     if (
       (task.diffDays || 0) < 10
@@ -212,7 +192,7 @@ async function checkTasks(user) {
     }
 
     //
-    // SUDAH PERNAH DIKIRIM
+    // JIKA SUDAH DIKIRIM
     //
     if (task.sent) {
       continue;
