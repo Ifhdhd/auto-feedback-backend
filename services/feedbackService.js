@@ -56,6 +56,32 @@ async function getCaseRecords(
 }
 
 //
+// FORMAT TANGGAL
+//
+function formatDate(timestamp) {
+
+  const d = new Date(Number(timestamp));
+
+  const day =
+    String(d.getDate()).padStart(2, "0");
+
+  const month =
+    String(d.getMonth() + 1).padStart(2, "0");
+
+  const year =
+    d.getFullYear();
+
+  const hour =
+    String(d.getHours()).padStart(2, "0");
+
+  const minute =
+    String(d.getMinutes()).padStart(2, "0");
+
+  return `${day}/${month}/${year} ${hour}:${minute}`;
+
+}
+
+//
 // HITUNG HARI SEJAK FEEDBACK TERAKHIR
 //
 async function enrichTask(
@@ -71,8 +97,24 @@ async function enrichTask(
         task.id || task.taskId
       );
 
-    let rows =
-      result.data?.data || [];
+    //
+    // FIX AMBIL ARRAY DATA
+    //
+    let rows = [];
+
+    if (
+      Array.isArray(result.data)
+    ) {
+
+      rows = result.data;
+
+    } else if (
+      Array.isArray(result.data?.data)
+    ) {
+
+      rows = result.data.data;
+
+    }
 
     //
     // BELUM ADA FEEDBACK
@@ -84,12 +126,15 @@ async function enrichTask(
       task.lastFeedbackText =
         "Belum pernah feedback";
 
+      task.lastFeedbackDate =
+        "-";
+
       return task;
 
     }
 
     //
-    // URUTKAN BERDASARKAN createTime TERBARU
+    // URUTKAN TERBARU
     //
     rows.sort((a, b) => {
 
@@ -112,12 +157,16 @@ async function enrichTask(
     //
     // DEBUG
     //
-    console.log("TASK:");
-    console.log(task.userName);
+    console.log("==========");
 
-    console.log("LAST FEEDBACK:");
     console.log(
-      new Date(lastTime)
+      "USER:",
+      task.userName
+    );
+
+    console.log(
+      "LAST:",
+      formatDate(lastTime)
     );
 
     const now =
@@ -145,8 +194,23 @@ async function enrichTask(
         ? 0
         : diffDays;
 
+    //
+    // TANGGAL FEEDBACK
+    //
+    task.lastFeedbackDate =
+      formatDate(lastTime);
+
+    //
+    // TEXT
+    //
     task.lastFeedbackText =
       `${task.diffDays} hari sejak feedback terakhir`;
+
+    console.log(
+      "DIFF:",
+      task.diffDays,
+      "hari"
+    );
 
     return task;
 
@@ -161,6 +225,12 @@ async function enrichTask(
     );
 
     task.diffDays = 999;
+
+    task.lastFeedbackDate =
+      "-";
+
+    task.lastFeedbackText =
+      "Gagal ambil feedback";
 
     return task;
 
