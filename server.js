@@ -107,129 +107,72 @@ app.post("/login", async (req, res) => {
   }
 
 });
-//
-// TASKS
-//
+// LOAD TASK + enrich + merge sent
 app.get("/tasks/:account", async (req, res) => {
-
   try {
-
     const users = loadUsers();
+    const user = users.find(u => u.account === req.params.account);
 
-    const user =
-      users.find(
-        u => u.account === req.params.account
-      );
+    if (!user) return res.json({ success: false });
 
-    if (!user) {
+    const result = await getTasks(user.cookies);
+    const newTasks = result.data || [];
 
-      return res.json({
-        success: false
-      });
+    const mergedTasks = newTasks.map(nt => {
+      const old = user.tasks.find(t => t.id == nt.id);
 
-    }
-
-    const result =
-      await getTasks(user.cookies);
-
-    const data =
-      result.data || [];
-
-    res.json({
-      success: true,
-      data
+      return {
+        ...nt,
+        sent: old?.sent || false
+      };
     });
 
-  } catch (err) {
-
-    res.json({
-      success: false,
-      error: err.message
-    });
-
-  }
-
-});
-//
-// AUTO FEEDBACK
-//
-app.get("/auto-feedback/:account", async (req, res) => {
-
-  try {
-
-    const users = loadUsers();
-
-    const user =
-      users.find(
-        u => u.account === req.params.account
-      );
-
-    if (!user) {
-
-      return res.json({
-        success: false,
-        error: "User tidak ditemukan"
-      });
-
+    // 🔥 enrich diffDays
+    for (let t of mergedTasks) {
+      await enrichTask(user, t);
     }
 
-    const result =
-      await checkTasks(user);
-
+    user.tasks = mergedTasks;
     saveUsers(users);
 
     res.json({
       success: true,
-      result
+      total: result.total,
+      data: mergedTasks
     });
 
   } catch (err) {
-
-    res.json({
-      success: false,
-      error: err.message
-    });
-
+    res.json({ success: false, error: err.message });
   }
-
 });
 
-//
-// NOTIF
-//
-app.get("/notif/:account", (req, res) => {
-
+// AUTO FEEDBACK (manual)
+app.get("/auto-feedback/:account", async (req, res) => {
   try {
+    const users = loadUsers();
+    const user = users.find(u => u.account === req.params.account);
 
-    const data =
-      getNotif(req.params.account);
+    if (!user) return res.json({ success: false });
 
-    res.json({
-      success: true,
-      data
-    });
+    await checkTasks(user);
+
+    saveUsers(users);
+
+    res.json({ success: true });
 
   } catch (err) {
-
-    res.json({
-      success: false,
-      error: err.message
-    });
-
+    res.json({ success: false });
   }
-
 });
 
-//
-// START
-//
-const PORT =
-  process.env.PORT || 3000;
+// NOTIF
+app.get("/notif/:account", (req, res) => {
+  res.json({
+    success: true,
+    data: getNotif(req.params.account)
+  });
+});
 
-app.listen(PORT, () => {
-
-  console.log(
-    "Server running on port " + PORT
-  );
-
+app.listen(3000, () => {
+  console.log("Server jalan di port 3000 🚀");
 });
