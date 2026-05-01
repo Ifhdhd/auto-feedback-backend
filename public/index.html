@@ -2,7 +2,9 @@
 <html>
 <head>
   <title>Auto Feedback App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
 
   <style>
 
@@ -52,9 +54,8 @@
 
     .header{
       text-align:center;
-      font-size:20px;
+      font-size:18px;
       margin-bottom:10px;
-      font-weight:bold;
     }
 
     .card{
@@ -130,70 +131,11 @@
       padding:12px 20px;
       border-radius:8px;
       display:none;
-      z-index:1000;
-    }
-
-    .progress-bar{
-      height:10px;
-      background:#222;
-      border-radius:10px;
-      overflow:hidden;
-      margin-top:10px;
-    }
-
-    .progress-fill{
-      height:100%;
-      width:0%;
-      background:red;
-    }
-
-    #drawer{
-      position:fixed;
-      top:0;
-      right:-100%;
-      width:80%;
-      height:100%;
-      background:#0b1120;
-      transition:0.3s;
-      z-index:2000;
-      overflow-y:auto;
-    }
-
-    #drawer.open{
-      right:0;
-    }
-
-    .drawer-header{
-      padding:15px;
-      background:#111827;
-      font-weight:bold;
-      display:flex;
-      justify-content:space-between;
-    }
-
-    .log-item{
-      padding:12px;
-      border-bottom:1px solid #111;
-      font-size:13px;
-    }
-
-    .success{
-      color:#00ff9d;
-    }
-
-    .error{
-      color:red;
-    }
-
-    .skip{
-      color:orange;
-    }
-
-    .info{
-      color:#4cc9f0;
+      z-index:999;
     }
 
   </style>
+
 </head>
 
 <body>
@@ -205,7 +147,8 @@
 <div id="toast" class="toast"></div>
 
 <!-- LOGIN -->
-<div id="loginScreen" class="screen active">
+<div id="loginScreen"
+     class="screen active">
 
   <div class="container">
 
@@ -213,13 +156,23 @@
       LOGIN
     </div>
 
-    <input id="account" placeholder="No HP">
+    <input id="account"
+           placeholder="No HP">
 
-    <input id="password" type="password" placeholder="Password">
+    <input id="password"
+           type="password"
+           placeholder="Password">
 
     <select id="appVersion">
-      <option value="0">NON ZIZHANGYI</option>
-      <option value="1">ZIZHANGYI</option>
+
+      <option value="0">
+        NON ZIZHANGYI
+      </option>
+
+      <option value="1">
+        ZIZHANGYI
+      </option>
+
     </select>
 
     <button onclick="login()">
@@ -231,7 +184,8 @@
 </div>
 
 <!-- HOME -->
-<div id="homeScreen" class="screen">
+<div id="homeScreen"
+     class="screen">
 
   <div class="container">
 
@@ -250,7 +204,8 @@
 </div>
 
 <!-- AUTO -->
-<div id="autoScreen" class="screen">
+<div id="autoScreen"
+     class="screen">
 
   <div class="container">
 
@@ -268,8 +223,21 @@
         0 / 0
       </div>
 
-      <div class="progress-bar">
-        <div id="progressFill" class="progress-fill"></div>
+      <div style="
+        height:10px;
+        background:#222;
+        border-radius:10px;
+        overflow:hidden;
+        margin-top:10px;
+      ">
+
+        <div id="progressFill"
+             style="
+               height:100%;
+               width:0%;
+               background:red;
+             "></div>
+
       </div>
 
     </div>
@@ -277,23 +245,6 @@
     <div id="successList"></div>
 
   </div>
-
-</div>
-
-<!-- DRAWER -->
-<div id="drawer">
-
-  <div class="drawer-header">
-
-    LOG SYSTEM
-
-    <button onclick="closeDrawer()" style="background:none;border:none;color:white;">
-      X
-    </button>
-
-  </div>
-
-  <div id="logContent"></div>
 
 </div>
 
@@ -308,10 +259,6 @@
     ⚡<br>Auto
   </button>
 
-  <button onclick="openDrawer()">
-    📋<br>Log
-  </button>
-
 </div>
 
 <script>
@@ -322,21 +269,26 @@ let user = "";
 
 function showLoading(s){
 
-  document.getElementById("loading").style.display =
-    s ? "flex" : "none";
+  document
+    .getElementById("loading")
+    .style.display =
+      s ? "flex" : "none";
 
 }
 
 function toast(msg){
 
-  const t = document.getElementById("toast");
+  const t =
+    document.getElementById("toast");
 
   t.innerText = msg;
 
   t.style.display = "block";
 
   setTimeout(()=>{
+
     t.style.display = "none";
+
   },2000);
 
 }
@@ -353,14 +305,9 @@ function showScreen(id){
 
 }
 
-function addLog(msg,type="info"){
-
-  document.getElementById("logContent").innerHTML =
-    `<div class="log-item ${type}">${msg}</div>` +
-    document.getElementById("logContent").innerHTML;
-
-}
-
+//
+// LOGIN
+//
 async function login(){
 
   user =
@@ -376,23 +323,27 @@ async function login(){
 
   try{
 
-    const res = await fetch("/login",{
+    const res =
+      await fetch("/login",{
 
-      method:"POST",
+        method:"POST",
 
-      headers:{
-        "Content-Type":"application/json"
-      },
+        headers:{
+          "Content-Type":"application/json"
+        },
 
-      body:JSON.stringify({
-        account:user,
-        password,
-        appVersion
-      })
+        body:JSON.stringify({
 
-    });
+          account:user,
+          password,
+          appVersion
 
-    const data = await res.json();
+        })
+
+      });
+
+    const data =
+      await res.json();
 
     showLoading(false);
 
@@ -400,23 +351,12 @@ async function login(){
 
       toast("Login berhasil");
 
-      addLog(
-        "Login sukses: " +
-        user +
-        " | APP VERSION " +
-        appVersion,
-        "success"
-      );
-
       showScreen("homeScreen");
 
     }else{
 
-      toast("Login gagal");
-
-      addLog(
-        "Login gagal: " + user,
-        "error"
+      toast(
+        data.error || "Login gagal"
       );
 
     }
@@ -427,15 +367,13 @@ async function login(){
 
     toast("Koneksi error");
 
-    addLog(
-      "Koneksi error",
-      "error"
-    );
-
   }
 
 }
 
+//
+// LOAD TASK
+//
 async function loadTasks(){
 
   showLoading(true);
@@ -453,13 +391,24 @@ async function loadTasks(){
 
     list.innerHTML = "";
 
+    if(!data.success){
+
+      toast(
+        data.error || "Gagal load task"
+      );
+
+      showLoading(false);
+
+      return;
+    }
+
     data.data.forEach(t=>{
 
-      const days =
+      const diff =
         t.diffDays || 0;
 
       const color =
-        (days >= 10)
+        diff >= 10
         ? "red"
         : "green";
 
@@ -468,13 +417,17 @@ async function loadTasks(){
         <div class="card">
 
           <div class="row">
-            <div class="dot" style="background:${color}"></div>
+
+            <div class="dot"
+                 style="background:${color}">
+            </div>
 
             <b>${t.userName || "-"}</b>
+
           </div>
 
           <div>
-            ${days} hari sejak terakhir feedback
+            ${diff} hari sejak feedback terakhir
           </div>
 
         </div>
@@ -482,11 +435,6 @@ async function loadTasks(){
       `;
 
     });
-
-    addLog(
-      "Load task selesai",
-      "info"
-    );
 
   }catch(err){
 
@@ -498,95 +446,82 @@ async function loadTasks(){
 
 }
 
+//
+// AUTO FEEDBACK
+//
 async function startAuto(){
 
   showScreen("autoScreen");
 
   showLoading(true);
 
-  const res =
-    await fetch("/tasks/" + user);
+  try{
 
-  const data =
-    await res.json();
+    const res =
+      await fetch("/tasks/" + user);
 
-  showLoading(false);
+    const data =
+      await res.json();
 
-  let tasks =
-    data.data || [];
+    showLoading(false);
 
-  let total =
-    tasks.length;
+    let tasks =
+      data.data || [];
 
-  let done = 0;
+    let total =
+      tasks.length;
 
-  document.getElementById("successList").innerHTML = "";
+    let done = 0;
 
-  for(let t of tasks){
+    document
+      .getElementById("successList")
+      .innerHTML = "";
 
-    if((t.diffDays || 0) < 10){
+    for(let t of tasks){
 
-      addLog(
-        "Skip: " + t.userName,
-        "skip"
+      if((t.diffDays || 0) < 10){
+        continue;
+      }
+
+      await fetch(
+        "/auto-feedback/" + user
       );
 
-      continue;
+      done++;
 
+      let percent =
+        (done / total) * 100;
+
+      document
+        .getElementById("progressText")
+        .innerText =
+          done + " / " + total;
+
+      document
+        .getElementById("progressFill")
+        .style.width =
+          percent + "%";
+
+      document
+        .getElementById("successList")
+        .innerHTML += `
+
+          <div class="card">
+            ✔ ${t.userName}
+          </div>
+
+        `;
     }
 
-    await fetch(
-      "/auto-feedback/" + user
-    );
+    toast("Auto selesai");
 
-    done++;
+  }catch(err){
 
-    let percent =
-      (done/total)*100;
+    showLoading(false);
 
-    document.getElementById("progressText").innerText =
-      done + " / " + total;
-
-    document.getElementById("progressFill").style.width =
-      percent + "%";
-
-    document.getElementById("successList").innerHTML += `
-
-      <div class="card">
-        ✔ ${t.userName}
-      </div>
-
-    `;
-
-    addLog(
-      "Success feedback: " + t.userName,
-      "success"
-    );
+    toast("Auto feedback gagal");
 
   }
-
-  toast("Auto selesai");
-
-  addLog(
-    "Auto feedback selesai",
-    "success"
-  );
-
-}
-
-function openDrawer(){
-
-  document
-    .getElementById("drawer")
-    .classList.add("open");
-
-}
-
-function closeDrawer(){
-
-  document
-    .getElementById("drawer")
-    .classList.remove("open");
 
 }
 
