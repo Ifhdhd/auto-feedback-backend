@@ -124,31 +124,16 @@ app.get("/tasks/:account", async (req, res) => {
     if (!user) {
 
       return res.json({
-        success: false,
-        error: "User tidak ditemukan"
+        success: false
       });
 
     }
 
-    const tasks =
+    const result =
       await getTasks(user.cookies);
 
-    let data =
-      tasks.data?.data || [];
-
-    for (let i = 0; i < data.length; i++) {
-
-      data[i] =
-        await enrichTask(
-          user,
-          data[i]
-        );
-
-    }
-
-    user.tasks = data;
-
-    saveUsers(users);
+    const data =
+      result.data || [];
 
     res.json({
       success: true,
@@ -165,7 +150,6 @@ app.get("/tasks/:account", async (req, res) => {
   }
 
 });
-
 //
 // AUTO FEEDBACK
 //
