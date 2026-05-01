@@ -7,61 +7,59 @@ async function login(
   appVersion = "0"
 ) {
 
-  const body = {
+  const finalPassword =
 
-    account,
-
-    pwd: md5(password),
-
-    appVersion: String(appVersion)
-
-  };
-
-  const headers = {
-
-    "Content-Type": "application/json",
-
-    "deviceId":
-      "ffffffff-a665-1a66-0000-0000748ca5f0",
-
-    "deviceModel":
-      "5030U",
-
-    "osVersion":
-      "10",
-
-    "versionCode":
-      "300",
-
-    "versionName":
-      "2.7.9-release",
-
-    "countryCode":
-      "ID",
-
-    "timeZoneId":
-      "Asia/Jakarta",
-
-    "User-Agent":
-      "okhttp/4.9.2"
-
-  };
+    password.length === 32
+      ? password
+      : md5(password);
 
   const res = await axios.post(
 
     "https://ez-co-app.tin.group/app/offline/user/login",
 
-    body,
+    {
+      account,
+      pwd: finalPassword,
+      appVersion: String(appVersion)
+    },
 
     {
-      headers
+      headers: {
+
+        "Content-Type": "application/json",
+
+        "deviceId":
+          "ffffffff-a665-1a66-0000-0000748ca5f0",
+
+        "deviceModel":
+          "5030U",
+
+        "osVersion":
+          "10",
+
+        "versionCode":
+          "300",
+
+        "versionName":
+          "2.7.9-release",
+
+        "countryCode":
+          "ID",
+
+        "timeZoneId":
+          "Asia/Jakarta",
+
+        "User-Agent":
+          "okhttp/4.9.2"
+
+      }
     }
 
   );
 
   const cookies =
     res.headers["set-cookie"]
-      ?.map(c => c.split(";")[0])
+      ?.map(v => v.split(";")[0])
       .join("; ") || "";
 
   return {
