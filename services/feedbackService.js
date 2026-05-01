@@ -1,39 +1,70 @@
 const axios = require("axios");
 
-async function getCaseRecords(cookies, taskId) {
+//
+// GET RIWAYAT FEEDBACK
+//
+async function getCaseRecords(
+  cookies,
+  taskId
+) {
 
   const res = await axios.post(
+
     "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
+
     {
       actionType: 3,
       pageNo: 1,
       pageSize: 5,
       taskId: String(taskId)
     },
+
     {
       headers: {
-        "Content-Type": "application/json",
 
-        "Cookie": cookies,
+        "Content-Type":
+          "application/json",
 
-        "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-        "deviceModel": "5030U",
-        "osVersion": "10",
-        "versionCode": "300",
-        "versionName": "2.7.9-release",
-        "countryCode": "ID",
-        "timeZoneId": "Asia/Jakarta"
+        "Cookie":
+          cookies,
+
+        "deviceId":
+          "ffffffff-a665-1a66-0000-0000748ca5f0",
+
+        "deviceModel":
+          "5030U",
+
+        "osVersion":
+          "10",
+
+        "versionCode":
+          "300",
+
+        "versionName":
+          "2.7.9-release",
+
+        "countryCode":
+          "ID",
+
+        "timeZoneId":
+          "Asia/Jakarta"
+
       }
     }
+
   );
 
   return res.data;
+
 }
 
 //
 // HITUNG HARI SEJAK FEEDBACK TERAKHIR
 //
-async function enrichTask(user, task) {
+async function enrichTask(
+  user,
+  task
+) {
 
   try {
 
@@ -46,43 +77,107 @@ async function enrichTask(user, task) {
     const rows =
       result.data?.data || [];
 
+    //
+    // BELUM ADA FEEDBACK
+    //
     if (rows.length <= 0) {
 
       task.diffDays = 999;
+
+      task.lastFeedbackText =
+        "Belum pernah feedback";
 
       return task;
 
     }
 
-    // ambil feedback terbaru
-    const latest = rows[0];
+    //
+    // AMBIL FEEDBACK TERBARU
+    //
+    const latest =
+      rows[0];
 
+    //
+    // TIMESTAMP API
+    //
     const lastTime =
       Number(latest.createTime);
 
+    //
+    // WAKTU SEKARANG
+    //
     const now =
       Date.now();
 
+    //
+    // SELISIH MILLISECOND
+    //
     const diffMs =
       now - lastTime;
 
+    //
+    // KONVERSI KE HARI
+    //
     const diffDays =
       Math.floor(
-        diffMs / (1000 * 60 * 60 * 24)
+        diffMs /
+        (
+          1000 *
+          60 *
+          60 *
+          24
+        )
       );
 
-    task.lastFeedbackTime = lastTime;
+    //
+    // FORMAT TANGGAL
+    //
+    const date =
+      new Date(lastTime);
+
+    const tanggal =
+      date.toLocaleDateString(
+        "id-ID",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        }
+      );
+
+    //
+    // SIMPAN
+    //
+    task.lastFeedbackTime =
+      lastTime;
+
+    task.lastFeedbackDate =
+      tanggal;
 
     task.diffDays =
       diffDays < 0
-      ? 0
-      : diffDays;
+        ? 0
+        : diffDays;
+
+    task.lastFeedbackText =
+      `${task.diffDays} hari sejak feedback terakhir`;
 
     return task;
 
   } catch (err) {
 
+    console.log(
+      "ENRICH ERROR:"
+    );
+
+    console.log(
+      err.message
+    );
+
     task.diffDays = 999;
+
+    task.lastFeedbackText =
+      "Gagal cek feedback";
 
     return task;
 
@@ -99,13 +194,26 @@ async function checkTasks(user) {
 
   for (let task of user.tasks) {
 
-    await enrichTask(user, task);
+    //
+    // UPDATE DIFF DAYS DULU
+    //
+    await enrichTask(
+      user,
+      task
+    );
 
-    // hanya feedback jika >=10 hari
-    if ((task.diffDays || 0) < 10) {
+    //
+    // BELUM 10 HARI
+    //
+    if (
+      (task.diffDays || 0) < 10
+    ) {
       continue;
     }
 
+    //
+    // SUDAH PERNAH DIKIRIM
+    //
     if (task.sent) {
       continue;
     }
@@ -113,38 +221,78 @@ async function checkTasks(user) {
     try {
 
       await axios.post(
+
         "https://ez-co-app.tin.group/app/offline/task/case/record/save",
+
         {
-          taskId: String(task.id || task.taskId),
+          taskId:
+            String(
+              task.id ||
+              task.taskId
+            ),
+
           actionType: 3,
+
           actionReferId: 166,
+
           actionFlagType: 2,
+
           actionComment: ""
         },
+
         {
           headers: {
-            "Content-Type": "application/json",
 
-            "Cookie": user.cookies,
+            "Content-Type":
+              "application/json",
 
-            "deviceId": "ffffffff-a665-1a66-0000-0000748ca5f0",
-            "deviceModel": "5030U",
-            "osVersion": "10",
-            "versionCode": "300",
-            "versionName": "2.7.9-release",
-            "countryCode": "ID",
-            "timeZoneId": "Asia/Jakarta"
+            "Cookie":
+              user.cookies,
+
+            "deviceId":
+              "ffffffff-a665-1a66-0000-0000748ca5f0",
+
+            "deviceModel":
+              "5030U",
+
+            "osVersion":
+              "10",
+
+            "versionCode":
+              "300",
+
+            "versionName":
+              "2.7.9-release",
+
+            "countryCode":
+              "ID",
+
+            "timeZoneId":
+              "Asia/Jakarta"
+
           }
         }
+
       );
 
       task.sent = true;
 
       success.push(task);
 
+      console.log(
+        "FEEDBACK BERHASIL:",
+        task.userName
+      );
+
     } catch (err) {
 
-      console.log(err.message);
+      console.log(
+        "FEEDBACK ERROR:"
+      );
+
+      console.log(
+        err.message
+      );
 
     }
 
@@ -155,6 +303,9 @@ async function checkTasks(user) {
 }
 
 module.exports = {
+
   checkTasks,
+
   enrichTask
+
 };
