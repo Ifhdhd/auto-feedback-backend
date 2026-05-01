@@ -176,3 +176,4 @@ app.get("/notif/:account", (req, res) => {
 app.listen(3000, () => {
   console.log("Server jalan di port 3000 🚀");
 });
+      
