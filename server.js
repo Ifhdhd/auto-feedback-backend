@@ -17,12 +17,24 @@ app.use(express.static("public"));
 const USERS_FILE = path.join(__dirname, "storage/users.json");
 
 function loadUsers() {
-  if (!fs.existsSync(USERS_FILE)) return [];
-  return JSON.parse(fs.readFileSync(USERS_FILE));
+
+  if (!fs.existsSync(USERS_FILE)) {
+    return [];
+  }
+
+  return JSON.parse(
+    fs.readFileSync(USERS_FILE)
+  );
+
 }
 
 function saveUsers(data) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+
+  fs.writeFileSync(
+    USERS_FILE,
+    JSON.stringify(data, null, 2)
+  );
+
 }
 
 //
@@ -45,33 +57,33 @@ app.post("/login", async (req, res) => {
     );
 
     if (!result.data.success) {
+
       return res.json({
         success: false,
         data: result.data
       });
+
     }
 
     const users = loadUsers();
 
-    const newUser = {
+    const filtered =
+      users.filter(
+        u => u.account !== account
+      );
+
+    filtered.push({
       account,
       appVersion,
       cookies: result.cookies,
       tasks: []
-    };
-
-    const filtered = users.filter(
-      u => u.account !== account
-    );
-
-    filtered.push(newUser);
+    });
 
     saveUsers(filtered);
 
     res.json({
       success: true,
-      appVersion,
-      cookies: result.cookies
+      appVersion
     });
 
   } catch (err) {
@@ -86,7 +98,7 @@ app.post("/login", async (req, res) => {
 });
 
 //
-// GET TASK
+// TASKS
 //
 app.get("/tasks/:account", async (req, res) => {
 
@@ -94,22 +106,34 @@ app.get("/tasks/:account", async (req, res) => {
 
     const users = loadUsers();
 
-    const user = users.find(
-      u => u.account === req.params.account
-    );
+    const user =
+      users.find(
+        u => u.account === req.params.account
+      );
 
     if (!user) {
+
       return res.json({
-        success: false
+        success: false,
+        error: "User tidak ditemukan"
       });
+
     }
 
-    const tasks = await getTasks(user.cookies);
+    const tasks =
+      await getTasks(user.cookies);
 
-    let data = tasks.data || [];
+    let data =
+      tasks.data?.data || [];
 
     for (let i = 0; i < data.length; i++) {
-      data[i] = await enrichTask(user, data[i]);
+
+      data[i] =
+        await enrichTask(
+          user,
+          data[i]
+        );
+
     }
 
     user.tasks = data;
@@ -141,17 +165,22 @@ app.get("/auto-feedback/:account", async (req, res) => {
 
     const users = loadUsers();
 
-    const user = users.find(
-      u => u.account === req.params.account
-    );
+    const user =
+      users.find(
+        u => u.account === req.params.account
+      );
 
     if (!user) {
+
       return res.json({
-        success: false
+        success: false,
+        error: "User tidak ditemukan"
       });
+
     }
 
-    const result = await checkTasks(user);
+    const result =
+      await checkTasks(user);
 
     saveUsers(users);
 
@@ -176,20 +205,37 @@ app.get("/auto-feedback/:account", async (req, res) => {
 //
 app.get("/notif/:account", (req, res) => {
 
-  const data = getNotif(req.params.account);
+  try {
 
-  res.json({
-    success: true,
-    data
-  });
+    const data =
+      getNotif(req.params.account);
+
+    res.json({
+      success: true,
+      data
+    });
+
+  } catch (err) {
+
+    res.json({
+      success: false,
+      error: err.message
+    });
+
+  }
 
 });
 
 //
 // START
 //
-const PORT = process.env.PORT || 3000;
+const PORT =
+  process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server jalan di port " + PORT + " 🚀");
+
+  console.log(
+    "Server running on port " + PORT
+  );
+
 });
