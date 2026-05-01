@@ -74,27 +74,37 @@ async function sendFeedback(cookies, task) {
 // FORMAT TANGGAL
 // =======================
 function formatDate(timestamp) {
+
   try {
-    const date = new Date(Number(timestamp));
 
-    return (
-      date.toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric"
-      }) +
-      " " +
-      date.toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit"
-      })
-    );
+    const ts = Number(timestamp);
 
-  } catch {
+    // kalau timestamp masih detik
+    const finalTs =
+      ts < 9999999999
+      ? ts * 1000
+      : ts;
+
+    const date = new Date(finalTs);
+
+    return date.toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
     return "-";
-  }
-}
 
+  }
+
+}
 // =======================
 // ENRICH TASK
 // =======================
