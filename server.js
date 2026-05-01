@@ -17,116 +17,179 @@ app.use(express.static("public"));
 const USERS_FILE = path.join(__dirname, "storage/users.json");
 
 function loadUsers() {
-  try {
-    return JSON.parse(fs.readFileSync(USERS_FILE));
-  } catch {
-    return [];
-  }
+  if (!fs.existsSync(USERS_FILE)) return [];
+  return JSON.parse(fs.readFileSync(USERS_FILE));
 }
 
 function saveUsers(data) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
 }
 
+//
 // LOGIN
+//
 app.post("/login", async (req, res) => {
-  try {
-    const { account, password } = req.body;
 
-    const result = await login(account, password);
+  try {
+
+    const {
+      account,
+      password,
+      appVersion = "0"
+    } = req.body;
+
+    const result = await login(
+      account,
+      password,
+      appVersion
+    );
 
     if (!result.data.success) {
-      return res.json({ success: false });
+      return res.json({
+        success: false,
+        data: result.data
+      });
     }
 
-    let users = loadUsers();
-
-    const oldUser = users.find(u => u.account === account);
+    const users = loadUsers();
 
     const newUser = {
       account,
+      appVersion,
       cookies: result.cookies,
-      tasks: oldUser?.tasks || []
+      tasks: []
     };
 
-    users = users.filter(u => u.account !== account);
-    users.push(newUser);
+    const filtered = users.filter(
+      u => u.account !== account
+    );
 
-    saveUsers(users);
+    filtered.push(newUser);
 
-    res.json({ success: true });
+    saveUsers(filtered);
 
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
-
-// LOAD TASK + enrich + merge sent
-app.get("/tasks/:account", async (req, res) => {
-  try {
-    const users = loadUsers();
-    const user = users.find(u => u.account === req.params.account);
-
-    if (!user) return res.json({ success: false });
-
-    const result = await getTasks(user.cookies);
-    const newTasks = result.data || [];
-
-    const mergedTasks = newTasks.map(nt => {
-      const old = user.tasks.find(t => t.id == nt.id);
-
-      return {
-        ...nt,
-        sent: old?.sent || false
-      };
+    res.json({
+      success: true,
+      appVersion,
+      cookies: result.cookies
     });
 
-    // 🔥 enrich diffDays
-    for (let t of mergedTasks) {
-      await enrichTask(user, t);
+  } catch (err) {
+
+    res.json({
+      success: false,
+      error: err.message
+    });
+
+  }
+
+});
+
+//
+// GET TASK
+//
+app.get("/tasks/:account", async (req, res) => {
+
+  try {
+
+    const users = loadUsers();
+
+    const user = users.find(
+      u => u.account === req.params.account
+    );
+
+    if (!user) {
+      return res.json({
+        success: false
+      });
     }
 
-    user.tasks = mergedTasks;
+    const tasks = await getTasks(user.cookies);
+
+    let data = tasks.data || [];
+
+    for (let i = 0; i < data.length; i++) {
+      data[i] = await enrichTask(user, data[i]);
+    }
+
+    user.tasks = data;
+
     saveUsers(users);
 
     res.json({
       success: true,
-      total: result.total,
-      data: mergedTasks
+      data
     });
 
   } catch (err) {
-    res.json({ success: false, error: err.message });
+
+    res.json({
+      success: false,
+      error: err.message
+    });
+
   }
+
 });
 
-// AUTO FEEDBACK (manual)
+//
+// AUTO FEEDBACK
+//
 app.get("/auto-feedback/:account", async (req, res) => {
+
   try {
+
     const users = loadUsers();
-    const user = users.find(u => u.account === req.params.account);
 
-    if (!user) return res.json({ success: false });
+    const user = users.find(
+      u => u.account === req.params.account
+    );
 
-    await checkTasks(user);
+    if (!user) {
+      return res.json({
+        success: false
+      });
+    }
+
+    const result = await checkTasks(user);
 
     saveUsers(users);
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      result
+    });
 
   } catch (err) {
-    res.json({ success: false });
+
+    res.json({
+      success: false,
+      error: err.message
+    });
+
   }
+
 });
 
+//
 // NOTIF
+//
 app.get("/notif/:account", (req, res) => {
+
+  const data = getNotif(req.params.account);
+
   res.json({
     success: true,
-    data: getNotif(req.params.account)
+    data
   });
+
 });
 
-app.listen(3000, () => {
-  console.log("Server jalan di port 3000 🚀");
+//
+// START
+//
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Server jalan di port " + PORT + " 🚀");
 });
