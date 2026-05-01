@@ -58,9 +58,9 @@ async function getCaseRecords(
 //
 // FORMAT TANGGAL
 //
-function formatDate(timestamp) {
+function formatDate(time) {
 
-  const d = new Date(Number(timestamp));
+  const d = new Date(time);
 
   const day =
     String(d.getDate()).padStart(2, "0");
@@ -71,13 +71,7 @@ function formatDate(timestamp) {
   const year =
     d.getFullYear();
 
-  const hour =
-    String(d.getHours()).padStart(2, "0");
-
-  const minute =
-    String(d.getMinutes()).padStart(2, "0");
-
-  return `${day}/${month}/${year} ${hour}:${minute}`;
+  return `${day}/${month}/${year}`;
 
 }
 
@@ -97,24 +91,8 @@ async function enrichTask(
         task.id || task.taskId
       );
 
-    //
-    // FIX AMBIL ARRAY DATA
-    //
-    let rows = [];
-
-    if (
-      Array.isArray(result.data)
-    ) {
-
-      rows = result.data;
-
-    } else if (
-      Array.isArray(result.data?.data)
-    ) {
-
-      rows = result.data.data;
-
-    }
+    let rows =
+      result.data?.data || [];
 
     //
     // BELUM ADA FEEDBACK
@@ -151,23 +129,20 @@ async function enrichTask(
     const latest =
       rows[0];
 
-    const lastTime =
+    let lastTime =
       Number(latest.createTime);
 
     //
-    // DEBUG
+    // FIX TIMESTAMP
     //
-    console.log("==========");
+    if (
+      String(lastTime).length === 10
+    ) {
 
-    console.log(
-      "USER:",
-      task.userName
-    );
+      lastTime =
+        lastTime * 1000;
 
-    console.log(
-      "LAST:",
-      formatDate(lastTime)
-    );
+    }
 
     const now =
       Date.now();
@@ -194,22 +169,25 @@ async function enrichTask(
         ? 0
         : diffDays;
 
-    //
-    // TANGGAL FEEDBACK
-    //
     task.lastFeedbackDate =
       formatDate(lastTime);
 
-    //
-    // TEXT
-    //
     task.lastFeedbackText =
       `${task.diffDays} hari sejak feedback terakhir`;
 
     console.log(
+      "USER:",
+      task.userName
+    );
+
+    console.log(
+      "LAST:",
+      task.lastFeedbackDate
+    );
+
+    console.log(
       "DIFF:",
-      task.diffDays,
-      "hari"
+      task.diffDays
     );
 
     return task;
@@ -228,9 +206,6 @@ async function enrichTask(
 
     task.lastFeedbackDate =
       "-";
-
-    task.lastFeedbackText =
-      "Gagal ambil feedback";
 
     return task;
 
@@ -253,7 +228,7 @@ async function checkTasks(user) {
     );
 
     //
-    // JIKA BELUM 10 HARI
+    // BELUM 10 HARI
     //
     if (
       (task.diffDays || 0) < 10
@@ -262,7 +237,7 @@ async function checkTasks(user) {
     }
 
     //
-    // JIKA SUDAH DIKIRIM
+    // SUDAH DIKIRIM
     //
     if (task.sent) {
       continue;
