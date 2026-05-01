@@ -7,68 +7,125 @@ async function login(
   appVersion = "0"
 ) {
 
-  const finalPassword =
+  try {
 
-    password.length === 32
-      ? password
-      : md5(password);
+    const finalPassword =
 
-  const res = await axios.post(
+      password.length === 32
+        ? password
+        : md5(password);
 
-    "https://ez-co-app.tin.group/app/offline/user/login",
+    console.log("LOGIN REQUEST:");
 
-    {
+    console.log({
       account,
       pwd: finalPassword,
       appVersion: String(appVersion)
-    },
+    });
 
-    {
-      headers: {
+    const res = await axios.post(
 
-        "Content-Type": "application/json",
+      "https://ez-co-app.tin.group/app/offline/user/login",
 
-        "deviceId":
-          "ffffffff-a665-1a66-0000-0000748ca5f0",
+      {
+        account,
+        pwd: finalPassword,
+        appVersion: String(appVersion)
+      },
 
-        "deviceModel":
-          "5030U",
+      {
+        headers: {
 
-        "osVersion":
-          "10",
+          "Content-Type":
+            "application/json",
 
-        "versionCode":
-          "300",
+          "deviceId":
+            "ffffffff-a665-1a66-0000-0000748ca5f0",
 
-        "versionName":
-          "2.7.9-release",
+          "deviceModel":
+            "5030U",
 
-        "countryCode":
-          "ID",
+          "osVersion":
+            "10",
 
-        "timeZoneId":
-          "Asia/Jakarta",
+          "versionCode":
+            "300",
 
-        "User-Agent":
-          "okhttp/4.9.2"
+          "versionName":
+            "2.7.9-release",
 
+          "countryCode":
+            "ID",
+
+          "timeZoneId":
+            "Asia/Jakarta",
+
+          "User-Agent":
+            "okhttp/4.9.2"
+
+        }
       }
+
+    );
+
+    console.log("LOGIN RESPONSE:");
+
+    console.log(
+      JSON.stringify(
+        res.data,
+        null,
+        2
+      )
+    );
+
+    const cookies =
+
+      res.headers["set-cookie"]
+        ?.map(v => v.split(";")[0])
+        .join("; ") || "";
+
+    console.log("COOKIES:");
+    console.log(cookies);
+
+    return {
+
+      data: res.data,
+
+      cookies
+
+    };
+
+  } catch (err) {
+
+    console.log("LOGIN ERROR:");
+
+    if (err.response) {
+
+      console.log(
+        JSON.stringify(
+          err.response.data,
+          null,
+          2
+        )
+      );
+
+    } else {
+
+      console.log(err.message);
+
     }
 
-  );
+    return {
 
-  const cookies =
-    res.headers["set-cookie"]
-      ?.map(v => v.split(";")[0])
-      .join("; ") || "";
+      data: {
+        success: false
+      },
 
-  return {
+      cookies: ""
 
-    data: res.data,
+    };
 
-    cookies
-
-  };
+  }
 
 }
 
