@@ -1,128 +1,176 @@
 const axios = require("axios");
+const { addNotif } = require("./notifStore");
 
-async function getCaseRecords(
-  cookies,
-  taskId
-) {
-
-  const res = await axios.post(
-
-    "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
-
-    {
-      actionType: 3,
-      pageNo: 1,
-      pageSize: 50,
-      taskId: String(taskId)
-    },
-
-    {
-      headers: {
-
-        "Content-Type":
-          "application/json",
-
-        "Cookie":
-          cookies,
-
-        "deviceId":
-          "ffffffff-a665-1a66-0000-0000748ca5f0",
-
-        "deviceModel":
-          "5030U",
-
-        "osVersion":
-          "10",
-
-        "versionCode":
-          "300",
-
-        "versionName":
-          "2.7.9-release",
-
-        "countryCode":
-          "ID",
-
-        "timeZoneId":
-          "Asia/Jakarta"
-
-      }
-    }
-
-  );
-
-  return res.data;
-
-}
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 //
-// FORMAT TANGGAL
+// AMBIL RIWAYAT FEEDBACK
 //
-function formatDate(timestamp){
-
-  if(!timestamp){
-    return "-";
-  }
-
-  const d = new Date(Number(timestamp));
-
-  const day =
-    String(d.getDate()).padStart(2,"0");
-
-  const month =
-    String(d.getMonth() + 1).padStart(2,"0");
-
-  const year =
-    d.getFullYear();
-
-  return `${day}/${month}/${year}`;
-
-}
-
-//
-// HITUNG HARI SEJAK FEEDBACK TERAKHIR
-//
-async function enrichTask(
-  user,
-  task
-) {
+async function getRecords(cookies, taskId) {
 
   try {
 
-    const result =
-      await getCaseRecords(
+    const res = await axios.post(
+
+      "https://ez-co-app.tin.group/app/offline/task/case/record/queryCaseRecord",
+
+      {
+        actionType: 3,
+        pageNo: 1,
+        pageSize: 20,
+        taskId
+      },
+
+      {
+        headers: {
+
+          Cookie: cookies,
+
+          "Content-Type":
+            "application/json",
+
+          deviceId:
+            "ffffffff-a665-1a66-0000-0000748ca5f0",
+
+          deviceModel:
+            "5030U",
+
+          osVersion:
+            "10",
+
+          versionCode:
+            "300",
+
+          versionName:
+            "2.7.9-release",
+
+          countryCode:
+            "ID",
+
+          timeZoneId:
+            "Asia/Jakarta"
+        }
+      }
+
+    );
+
+    return res.data?.data?.data || [];
+
+  } catch (err) {
+
+    console.log(
+      "getRecords error:",
+      err.message
+    );
+
+    return [];
+
+  }
+
+}
+
+//
+// KIRIM FEEDBACK
+//
+async function sendFeedback(cookies, task) {
+
+  try {
+
+    await axios.post(
+
+      "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
+
+      {
+        actionResultId: 166,
+        actionResultSerialNo: "X0019",
+        addressId:
+          task.addressBo?.addressId || 0,
+        assistTaskType: 0,
+        createTime: Date.now(),
+        feedbackType: "X0019",
+        promise: 0,
+        ptpAmount: 0,
+        ptpTime: 0,
+        remark: "",
+        taskId: Number(task.id)
+      },
+
+      {
+        headers: {
+
+          Cookie: cookies,
+
+          "Content-Type":
+            "application/json",
+
+          deviceId:
+            "ffffffff-a665-1a66-0000-0000748ca5f0",
+
+          deviceModel:
+            "5030U",
+
+          osVersion:
+            "10",
+
+          versionCode:
+            "300",
+
+          versionName:
+            "2.7.9-release",
+
+          countryCode:
+            "ID",
+
+          timeZoneId:
+            "Asia/Jakarta"
+        }
+      }
+
+    );
+
+    return true;
+
+  } catch (err) {
+
+    console.log(
+      "sendFeedback error:",
+      err.message
+    );
+
+    return false;
+
+  }
+
+}
+
+//
+// HITUNG FEEDBACK TERAKHIR
+//
+async function enrichTask(user, task) {
+
+  try {
+
+    const records =
+      await getRecords(
         user.cookies,
-        task.id || task.taskId
+        task.id
       );
 
-    console.log("==========");
-    console.log("USER:", task.userName);
-    console.log("RAW RESULT:");
-    console.log(JSON.stringify(result));
-
-    //
-    // AMBIL ARRAY YANG BENAR
-    //
-    let rows = [];
-
-    if(Array.isArray(result.data)){
-      rows = result.data;
-    }
-
-    else if(Array.isArray(result.data?.data)){
-      rows = result.data.data;
-    }
-
-    else if(Array.isArray(result.rows)){
-      rows = result.rows;
-    }
-
-    console.log("TOTAL RECORD:", rows.length);
+    const valid =
+      records
+        .filter(
+          r =>
+            r.actionReferId == 166
+        )
+        .sort((a, b) =>
+          Number(b.createTime) -
+          Number(a.createTime)
+        );
 
     //
     // BELUM ADA FEEDBACK
     //
-    if (rows.length <= 0) {
+    if (!valid.length) {
 
       task.diffDays = 999;
 
@@ -133,120 +181,60 @@ async function enrichTask(
 
     }
 
-    //
-    // SORT TERBARU
-    //
-    rows.sort((a, b) => {
-
-      return (
-        Number(
-          b.createTime ||
-          b.gmtCreate ||
-          0
-        ) -
-        Number(
-          a.createTime ||
-          a.gmtCreate ||
-          0
-        )
-      );
-
-    });
-
     const latest =
-      rows[0];
+      valid[0];
 
-    console.log("LATEST:");
-    console.log(latest);
-
-    //
-    // AMBIL TIMESTAMP
-    //
     const lastTime =
-      Number(
-        latest.createTime ||
-        latest.gmtCreate ||
-        0
+      Number(latest.createTime);
+
+    //
+    // FORMAT TANGGAL
+    //
+    const date =
+      new Date(lastTime);
+
+    const formatted =
+      date.toLocaleString(
+        "id-ID",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }
       );
-
-    console.log(
-      "LAST TIME:",
-      lastTime
-    );
-
-    //
-    // JIKA TIMESTAMP INVALID
-    //
-    if(!lastTime){
-
-      task.diffDays = 999;
-
-      task.lastFeedbackDate =
-        "Tanggal tidak ditemukan";
-
-      return task;
-
-    }
 
     //
     // HITUNG SELISIH HARI
     //
-    const now = Date.now();
-
     const diffMs =
-      now - lastTime;
+      Date.now() - lastTime;
 
     const diffDays =
       Math.floor(
-        diffMs /
-        (
-          1000 *
-          60 *
-          60 *
-          24
-        )
+        diffMs / 86400000
       );
 
-    task.lastFeedbackTime =
-      lastTime;
-
     task.diffDays =
-      diffDays < 0
-        ? 0
-        : diffDays;
+      diffDays;
 
     task.lastFeedbackDate =
-      formatDate(lastTime);
-
-    console.log(
-      "DIFF DAYS:",
-      task.diffDays
-    );
+      formatted;
 
     return task;
 
   } catch (err) {
 
     console.log(
-      "ENRICH ERROR:"
-    );
-
-    console.log(
+      "enrichTask error:",
       err.message
     );
-
-    if(err.response){
-      console.log(
-        JSON.stringify(
-          err.response.data
-        )
-      );
-    }
 
     task.diffDays = 999;
 
     task.lastFeedbackDate =
-      "Error ambil feedback";
+      "Error";
 
     return task;
 
@@ -259,126 +247,64 @@ async function enrichTask(
 //
 async function checkTasks(user) {
 
-  const success = [];
+  let sentCount = 0;
 
-  for (let task of user.tasks) {
-
-    await enrichTask(
-      user,
-      task
-    );
-
-    console.log(
-      "CHECK:",
-      task.userName,
-      task.diffDays
-    );
-
-    //
-    // BELUM 10 HARI
-    //
-    if (
-      Number(task.diffDays || 0) < 10
-    ) {
-      continue;
-    }
-
-    //
-    // SUDAH DIKIRIM
-    //
-    if (task.sent) {
-      continue;
-    }
+  for (let t of user.tasks) {
 
     try {
 
-      await axios.post(
+      //
+      // UPDATE INFO TERBARU
+      //
+      await enrichTask(user, t);
 
-        "https://ez-co-app.tin.group/app/offline/task/case/record/save",
+      //
+      // KIRIM FEEDBACK TANPA BATAS HARI
+      //
+      const ok =
+        await sendFeedback(
+          user.cookies,
+          t
+        );
 
-        {
-          taskId:
-            String(
-              task.id ||
-              task.taskId
-            ),
+      if (ok) {
 
-          actionType: 3,
+        sentCount++;
 
-          actionReferId: 166,
+        addNotif(
 
-          actionFlagType: 2,
+          user.account,
 
-          actionComment: ""
-        },
+          `✔ ${t.userName}
+${t.diffDays} hari
+${t.lastFeedbackDate}`
 
-        {
-          headers: {
+        );
 
-            "Content-Type":
-              "application/json",
+        console.log(
+          "SUCCESS:",
+          t.userName
+        );
 
-            "Cookie":
-              user.cookies,
+      }
 
-            "deviceId":
-              "ffffffff-a665-1a66-0000-0000748ca5f0",
-
-            "deviceModel":
-              "5030U",
-
-            "osVersion":
-              "10",
-
-            "versionCode":
-              "300",
-
-            "versionName":
-              "2.7.9-release",
-
-            "countryCode":
-              "ID",
-
-            "timeZoneId":
-              "Asia/Jakarta"
-
-          }
-        }
-
-      );
-
-      task.sent = true;
-
-      success.push(task);
-
-      console.log(
-        "FEEDBACK BERHASIL:",
-        task.userName
-      );
+      await sleep(800);
 
     } catch (err) {
 
       console.log(
-        "FEEDBACK ERROR:"
-      );
-
-      console.log(
+        "error task:",
         err.message
       );
-
-      if(err.response){
-        console.log(
-          JSON.stringify(
-            err.response.data
-          )
-        );
-      }
 
     }
 
   }
 
-  return success;
+  console.log(
+    "TOTAL TERKIRIM:",
+    sentCount
+  );
 
 }
 
