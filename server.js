@@ -50,40 +50,51 @@ app.post("/login", async (req, res) => {
       appVersion = "0"
     } = req.body;
 
-    const result = await login(
-      account,
-      password,
-      appVersion
-    );
+    const result =
+      await login(
+        account,
+        password,
+        appVersion
+      );
 
     if (!result.data.success) {
 
       return res.json({
-        success: false,
-        data: result.data
+        success: false
       });
 
     }
 
-    const users = loadUsers();
+    let users = loadUsers();
 
-    const filtered =
+    const oldUser =
+      users.find(
+        u => u.account === account
+      );
+
+    const newUser = {
+
+      account,
+
+      appVersion,
+
+      cookies: result.cookies,
+
+      tasks: oldUser?.tasks || []
+
+    };
+
+    users =
       users.filter(
         u => u.account !== account
       );
 
-    filtered.push({
-      account,
-      appVersion,
-      cookies: result.cookies,
-      tasks: []
-    });
+    users.push(newUser);
 
-    saveUsers(filtered);
+    saveUsers(users);
 
     res.json({
-      success: true,
-      appVersion
+      success: true
     });
 
   } catch (err) {
@@ -96,7 +107,6 @@ app.post("/login", async (req, res) => {
   }
 
 });
-
 //
 // TASKS
 //
