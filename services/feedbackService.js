@@ -3,7 +3,9 @@ const { addNotif } = require("./notifStore");
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// ambil riwayat feedback
+// =======================
+// AMBIL RIWAYAT FEEDBACK
+// =======================
 async function getRecords(cookies, taskId) {
   try {
     const res = await axios.post(
@@ -15,18 +17,25 @@ async function getRecords(cookies, taskId) {
         taskId
       },
       {
-        headers: { Cookie: cookies }
+        headers: {
+          Cookie: cookies,
+          "Content-Type": "application/json",
+          "User-Agent": "okhttp/4.9.2"
+        }
       }
     );
 
     return res.data?.data?.data || [];
+
   } catch (err) {
     console.log("getRecords error:", err.message);
     return [];
   }
 }
 
-// kirim feedback
+// =======================
+// KIRIM FEEDBACK
+// =======================
 async function sendFeedback(cookies, task) {
   try {
     await axios.post(
@@ -45,41 +54,98 @@ async function sendFeedback(cookies, task) {
         taskId: Number(task.id)
       },
       {
-        headers: { Cookie: cookies }
+        headers: {
+          Cookie: cookies,
+          "Content-Type": "application/json",
+          "User-Agent": "okhttp/4.9.2"
+        }
       }
     );
 
     return true;
+
   } catch (err) {
     console.log("sendFeedback error:", err.message);
     return false;
   }
 }
 
-// hitung selisih hari dari feedback terakhir
-async function enrichTask(user, task) {
-  const records = await getRecords(user.cookies, task.id);
+// =======================
+// FORMAT TANGGAL
+// =======================
+function formatDate(timestamp) {
+  try {
+    const date = new Date(Number(timestamp));
 
-  const valid = records
-    .filter(r => r.actionReferId == 166)
-    .sort((a, b) => Number(b.createTime) - Number(a.createTime));
+    return (
+      date.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      }) +
+      " " +
+      date.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit"
+      })
+    );
 
-  if (!valid.length) {
-    task.diffDays = 999; // belum pernah → anggap siap
-    return task;
+  } catch {
+    return "-";
   }
-
-  const latest = valid[0];
-
-  const diffDays =
-    (Date.now() - Number(latest.createTime)) / 86400000;
-
-  task.diffDays = Math.floor(diffDays);
-
-  return task;
 }
 
+// =======================
+// ENRICH TASK
+// =======================
+async function enrichTask(user, task) {
+  try {
+    const records = await getRecords(user.cookies, task.id);
+
+    const valid = records
+      .filter(r => Number(r.actionReferId) === 166)
+      .sort((a, b) => Number(b.createTime) - Number(a.createTime));
+
+    // BELUM PERNAH FEEDBACK
+    if (!valid.length) {
+      task.diffDays = 999;
+      task.lastFeedback = null;
+      task.lastFeedbackText = "Belum pernah";
+
+      return task;
+    }
+
+    const latest = valid[0];
+
+    const lastTime = Number(latest.createTime);
+
+    const diffDays =
+      (Date.now() - lastTime) / 86400000;
+
+    task.diffDays = Math.floor(diffDays);
+
+    // 🔥 FEEDBACK TERAKHIR
+    task.lastFeedback = lastTime;
+
+    // 🔥 FORMAT TANGGAL
+    task.lastFeedbackText = formatDate(lastTime);
+
+    return task;
+
+  } catch (err) {
+    console.log("enrichTask error:", err.message);
+
+    task.diffDays = 999;
+    task.lastFeedback = null;
+    task.lastFeedbackText = "-";
+
+    return task;
+  }
+}
+
+// =======================
 // AUTO FEEDBACK
+// =======================
 async function checkTasks(user) {
   let sentCount = 0;
 
@@ -87,15 +153,26 @@ async function checkTasks(user) {
     try {
       if (t.sent) continue;
 
+      // enrich
       await enrichTask(user, t);
 
-      // 🔥 RULE FINAL
-      if (t.diffDays < 10) continue;
+      // skip kalau belum 10 hari
+      if (t.diffDays < 10) {
+        console.log(
+          "SKIP:",
+          t.userName,
+          `${t.diffDays} hari`
+        );
 
+        continue;
+      }
+
+      // kirim feedback
       const ok = await sendFeedback(user.cookies, t);
 
       if (ok) {
         t.sent = true;
+
         sentCount++;
 
         addNotif(
@@ -103,7 +180,11 @@ async function checkTasks(user) {
           `✔ ${t.userName} (${t.diffDays} hari)`
         );
 
-        console.log("SUCCESS:", t.userName, t.diffDays);
+        console.log(
+          "SUCCESS:",
+          t.userName,
+          `${t.diffDays} hari`
+        );
       }
 
       await sleep(800);
@@ -116,4 +197,9 @@ async function checkTasks(user) {
   console.log("TOTAL TERKIRIM:", sentCount);
 }
 
-module.exports = { checkTasks, enrichTask };
+module.exports = {
+  checkTasks,
+  enrichTask,
+  getRecords,
+  sendFeedback
+};
