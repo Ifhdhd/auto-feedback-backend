@@ -5,181 +5,193 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #05070f;
-      color: white;
+
+    body{
+      margin:0;
+      font-family:Arial;
+      background:#05070f;
+      color:white;
     }
 
-    .screen {
-      display: none;
-      height: 100vh;
-      overflow: auto;
+    .screen{
+      display:none;
+      height:100vh;
+      overflow:auto;
     }
 
-    .active {
-      display: block;
+    .active{
+      display:block;
     }
 
-    .container {
-      padding: 20px;
-      padding-bottom: 90px;
+    .container{
+      padding:20px;
+      padding-bottom:90px;
     }
 
-    input {
-      width: 100%;
-      padding: 14px;
-      margin: 8px 0;
-      border-radius: 10px;
-      border: none;
-      background: #121826;
-      color: white;
+    input,select{
+      width:100%;
+      padding:14px;
+      margin:8px 0;
+      border-radius:10px;
+      border:none;
+      background:#121826;
+      color:white;
+      box-sizing:border-box;
     }
 
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 10px;
-      border-radius: 10px;
-      border: none;
-      background: linear-gradient(90deg, red, darkred);
-      color: white;
-      font-weight: bold;
+    button{
+      width:100%;
+      padding:14px;
+      margin-top:10px;
+      border-radius:10px;
+      border:none;
+      background:linear-gradient(90deg,red,darkred);
+      color:white;
+      font-weight:bold;
     }
 
-    .header {
-      text-align: center;
-      font-size: 18px;
-      margin-bottom: 10px;
+    .header{
+      text-align:center;
+      font-size:20px;
+      margin-bottom:10px;
+      font-weight:bold;
     }
 
-    .card {
-      background: #121826;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 10px;
+    .card{
+      background:#121826;
+      padding:12px;
+      border-radius:10px;
+      margin-bottom:10px;
     }
 
-    .row {
-      display: flex;
-      align-items: center;
+    .row{
+      display:flex;
+      align-items:center;
     }
 
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      margin-right: 8px;
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      margin-right:8px;
     }
 
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: #0b1120;
-      display: flex;
+    .bottom-nav{
+      position:fixed;
+      bottom:0;
+      width:100%;
+      background:#0b1120;
+      display:flex;
     }
 
-    .bottom-nav button {
-      flex: 1;
-      background: none;
-      color: white;
-      border: none;
-      padding: 10px;
-      font-size: 12px;
+    .bottom-nav button{
+      flex:1;
+      background:none;
+      color:white;
+      border:none;
+      padding:10px;
+      font-size:12px;
     }
 
-    /* LOADING */
-    .loading {
-      position: fixed;
+    .loading{
+      position:fixed;
       top:0;
       left:0;
       width:100%;
       height:100%;
-      background: rgba(0,0,0,0.7);
+      background:rgba(0,0,0,0.7);
       display:none;
       align-items:center;
       justify-content:center;
-      z-index: 999;
+      z-index:999;
     }
 
-    .spinner {
-      border: 4px solid #333;
-      border-top: 4px solid red;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
+    .spinner{
+      border:4px solid #333;
+      border-top:4px solid red;
+      border-radius:50%;
+      width:40px;
+      height:40px;
+      animation:spin 1s linear infinite;
     }
 
-    @keyframes spin {
-      100% { transform: rotate(360deg); }
+    @keyframes spin{
+      100%{
+        transform:rotate(360deg);
+      }
     }
 
-    /* TOAST */
-    .toast {
-      position: fixed;
-      bottom: 90px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e293b;
-      padding: 12px 20px;
-      border-radius: 8px;
-      display: none;
-      z-index: 1000;
+    .toast{
+      position:fixed;
+      bottom:90px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#1e293b;
+      padding:12px 20px;
+      border-radius:8px;
+      display:none;
+      z-index:1000;
     }
 
-    /* PROGRESS */
-    .progress-bar {
-      height: 10px;
-      background: #222;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 10px;
+    .progress-bar{
+      height:10px;
+      background:#222;
+      border-radius:10px;
+      overflow:hidden;
+      margin-top:10px;
     }
 
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      background: red;
+    .progress-fill{
+      height:100%;
+      width:0%;
+      background:red;
     }
 
-    /* 🔥 DRAWER LOG */
-    #drawer {
-      position: fixed;
-      top: 0;
-      right: -100%;
-      width: 80%;
-      height: 100%;
-      background: #0b1120;
-      transition: 0.3s;
-      z-index: 2000;
-      overflow-y: auto;
+    #drawer{
+      position:fixed;
+      top:0;
+      right:-100%;
+      width:80%;
+      height:100%;
+      background:#0b1120;
+      transition:0.3s;
+      z-index:2000;
+      overflow-y:auto;
     }
 
-    #drawer.open {
-      right: 0;
+    #drawer.open{
+      right:0;
     }
 
-    .drawer-header {
-      padding: 15px;
-      background: #111827;
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
+    .drawer-header{
+      padding:15px;
+      background:#111827;
+      font-weight:bold;
+      display:flex;
+      justify-content:space-between;
     }
 
-    .log-item {
-      padding: 12px;
-      border-bottom: 1px solid #111;
-      font-size: 13px;
+    .log-item{
+      padding:12px;
+      border-bottom:1px solid #111;
+      font-size:13px;
     }
 
-    .success { color: #00ff9d; }
-    .error { color: red; }
-    .skip { color: orange; }
-    .info { color: #4cc9f0; }
+    .success{
+      color:#00ff9d;
+    }
+
+    .error{
+      color:red;
+    }
+
+    .skip{
+      color:orange;
+    }
+
+    .info{
+      color:#4cc9f0;
+    }
 
   </style>
 </head>
@@ -194,160 +206,318 @@
 
 <!-- LOGIN -->
 <div id="loginScreen" class="screen active">
+
   <div class="container">
-    <div class="header">LOGIN</div>
+
+    <div class="header">
+      LOGIN
+    </div>
 
     <input id="account" placeholder="No HP">
+
     <input id="password" type="password" placeholder="Password">
 
-    <button onclick="login()">MASUK</button>
+    <select id="appVersion">
+      <option value="0">NON ZIZHANGYI</option>
+      <option value="1">ZIZHANGYI</option>
+    </select>
+
+    <button onclick="login()">
+      MASUK
+    </button>
+
   </div>
+
 </div>
 
 <!-- HOME -->
 <div id="homeScreen" class="screen">
-  <div class="container">
-    <div class="header">DASHBOARD</div>
 
-    <button onclick="loadTasks()">LOAD TASK</button>
+  <div class="container">
+
+    <div class="header">
+      DASHBOARD
+    </div>
+
+    <button onclick="loadTasks()">
+      LOAD TASK
+    </button>
 
     <div id="taskList"></div>
+
   </div>
+
 </div>
 
-<!-- AUTO PAGE -->
+<!-- AUTO -->
 <div id="autoScreen" class="screen">
-  <div class="container">
-    <div class="header">AUTO FEEDBACK</div>
 
-    <button onclick="startAuto()">START AUTO FEEDBACK</button>
+  <div class="container">
+
+    <div class="header">
+      AUTO FEEDBACK
+    </div>
+
+    <button onclick="startAuto()">
+      START AUTO FEEDBACK
+    </button>
 
     <div class="card">
-      <div id="progressText">0 / 0</div>
+
+      <div id="progressText">
+        0 / 0
+      </div>
+
       <div class="progress-bar">
         <div id="progressFill" class="progress-fill"></div>
       </div>
+
     </div>
 
     <div id="successList"></div>
+
   </div>
+
 </div>
 
 <!-- DRAWER -->
 <div id="drawer">
+
   <div class="drawer-header">
+
     LOG SYSTEM
-    <button onclick="closeDrawer()" style="background:none;border:none;color:white;">X</button>
+
+    <button onclick="closeDrawer()" style="background:none;border:none;color:white;">
+      X
+    </button>
+
   </div>
+
   <div id="logContent"></div>
+
 </div>
 
 <!-- NAV -->
 <div class="bottom-nav">
-  <button onclick="goHome()">🏠<br>Home</button>
-  <button onclick="goAuto()">⚡<br>Auto</button>
-  <button onclick="openDrawer()">📋<br>Log</button>
+
+  <button onclick="goHome()">
+    🏠<br>Home
+  </button>
+
+  <button onclick="goAuto()">
+    ⚡<br>Auto
+  </button>
+
+  <button onclick="openDrawer()">
+    📋<br>Log
+  </button>
+
 </div>
 
 <script>
 
-const BASE = "https://auto-feedback-backend-1.onrender.com";
+const BASE = "";
+
 let user = "";
 
-// UI
 function showLoading(s){
-  document.getElementById("loading").style.display = s ? "flex" : "none";
+
+  document.getElementById("loading").style.display =
+    s ? "flex" : "none";
+
 }
 
 function toast(msg){
+
   const t = document.getElementById("toast");
+
   t.innerText = msg;
+
   t.style.display = "block";
-  setTimeout(()=> t.style.display="none",2000);
+
+  setTimeout(()=>{
+    t.style.display = "none";
+  },2000);
+
 }
 
 function showScreen(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+
+  document
+    .querySelectorAll(".screen")
+    .forEach(s=>s.classList.remove("active"));
+
+  document
+    .getElementById(id)
+    .classList.add("active");
+
 }
 
-// LOG SYSTEM
 function addLog(msg,type="info"){
+
   document.getElementById("logContent").innerHTML =
     `<div class="log-item ${type}">${msg}</div>` +
     document.getElementById("logContent").innerHTML;
+
 }
 
-// LOGIN
 async function login(){
-  user = document.getElementById("account").value;
+
+  user =
+    document.getElementById("account").value;
+
+  const password =
+    document.getElementById("password").value;
+
+  const appVersion =
+    document.getElementById("appVersion").value;
 
   showLoading(true);
 
-  const res = await fetch(BASE + "/login",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      account:user,
-      password:document.getElementById("password").value
-    })
-  });
+  try{
 
-  const data = await res.json();
-  showLoading(false);
+    const res = await fetch("/login",{
 
-  if(data.success){
-    toast("Login berhasil");
-    addLog("Login sukses: "+user,"success");
-    showScreen("homeScreen");
-  } else {
-    toast("Login gagal");
-    addLog("Login gagal: "+user,"error");
+      method:"POST",
+
+      headers:{
+        "Content-Type":"application/json"
+      },
+
+      body:JSON.stringify({
+        account:user,
+        password,
+        appVersion
+      })
+
+    });
+
+    const data = await res.json();
+
+    showLoading(false);
+
+    if(data.success){
+
+      toast("Login berhasil");
+
+      addLog(
+        "Login sukses: " +
+        user +
+        " | APP VERSION " +
+        appVersion,
+        "success"
+      );
+
+      showScreen("homeScreen");
+
+    }else{
+
+      toast("Login gagal");
+
+      addLog(
+        "Login gagal: " + user,
+        "error"
+      );
+
+    }
+
+  }catch(err){
+
+    showLoading(false);
+
+    toast("Koneksi error");
+
+    addLog(
+      "Koneksi error",
+      "error"
+    );
+
   }
+
 }
 
-// LOAD TASK
 async function loadTasks(){
+
   showLoading(true);
 
-  const res = await fetch(BASE + "/tasks/" + user);
-  const data = await res.json();
+  try{
 
-  const list = document.getElementById("taskList");
-  list.innerHTML = "";
+    const res =
+      await fetch("/tasks/" + user);
 
-  data.data.forEach(t=>{
-    const days = t.diffDays || 0;
-    const color = (days >= 10) ? "red" : "green";
+    const data =
+      await res.json();
 
-    list.innerHTML += `
-      <div class="card">
-        <div class="row">
-          <div class="dot" style="background:${color}"></div>
-          <b>${t.userName}</b>
+    const list =
+      document.getElementById("taskList");
+
+    list.innerHTML = "";
+
+    data.data.forEach(t=>{
+
+      const days =
+        t.diffDays || 0;
+
+      const color =
+        (days >= 10)
+        ? "red"
+        : "green";
+
+      list.innerHTML += `
+
+        <div class="card">
+
+          <div class="row">
+            <div class="dot" style="background:${color}"></div>
+
+            <b>${t.userName || "-"}</b>
+          </div>
+
+          <div>
+            ${days} hari sejak terakhir feedback
+          </div>
+
         </div>
-        <div>${days} hari sejak terakhir feedback</div>
-      </div>
-    `;
-  });
 
-  addLog("Load task selesai","info");
+      `;
+
+    });
+
+    addLog(
+      "Load task selesai",
+      "info"
+    );
+
+  }catch(err){
+
+    toast("Load task gagal");
+
+  }
+
   showLoading(false);
+
 }
 
-// AUTO
 async function startAuto(){
+
   showScreen("autoScreen");
 
   showLoading(true);
 
-  const res = await fetch(BASE + "/tasks/" + user);
-  const data = await res.json();
+  const res =
+    await fetch("/tasks/" + user);
+
+  const data =
+    await res.json();
 
   showLoading(false);
 
-  let tasks = data.data || [];
-  let total = tasks.length;
+  let tasks =
+    data.data || [];
+
+  let total =
+    tasks.length;
+
   let done = 0;
 
   document.getElementById("successList").innerHTML = "";
@@ -355,42 +525,78 @@ async function startAuto(){
   for(let t of tasks){
 
     if((t.diffDays || 0) < 10){
-      addLog("Skip: "+t.userName,"skip");
+
+      addLog(
+        "Skip: " + t.userName,
+        "skip"
+      );
+
       continue;
+
     }
 
-    await fetch(BASE + "/auto-feedback/" + user);
+    await fetch(
+      "/auto-feedback/" + user
+    );
 
     done++;
 
-    let percent = (done/total)*100;
+    let percent =
+      (done/total)*100;
 
-    document.getElementById("progressText").innerText = done + " / " + total;
-    document.getElementById("progressFill").style.width = percent + "%";
+    document.getElementById("progressText").innerText =
+      done + " / " + total;
+
+    document.getElementById("progressFill").style.width =
+      percent + "%";
 
     document.getElementById("successList").innerHTML += `
-      <div class="card">✔ ${t.userName}</div>
+
+      <div class="card">
+        ✔ ${t.userName}
+      </div>
+
     `;
 
-    addLog("Success feedback: "+t.userName,"success");
+    addLog(
+      "Success feedback: " + t.userName,
+      "success"
+    );
+
   }
 
   toast("Auto selesai");
-  addLog("Auto feedback selesai","success");
+
+  addLog(
+    "Auto feedback selesai",
+    "success"
+  );
+
 }
 
-// DRAWER
 function openDrawer(){
-  document.getElementById("drawer").classList.add("open");
+
+  document
+    .getElementById("drawer")
+    .classList.add("open");
+
 }
 
 function closeDrawer(){
-  document.getElementById("drawer").classList.remove("open");
+
+  document
+    .getElementById("drawer")
+    .classList.remove("open");
+
 }
 
-// NAV
-function goHome(){ showScreen("homeScreen"); }
-function goAuto(){ showScreen("autoScreen"); }
+function goHome(){
+  showScreen("homeScreen");
+}
+
+function goAuto(){
+  showScreen("autoScreen");
+}
 
 </script>
 
