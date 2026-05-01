@@ -29,11 +29,8 @@ async function getRecords(cookies, taskId) {
 // kirim feedback
 async function sendFeedback(cookies, task) {
   try {
-
-    const res = await axios.post(
-
+    await axios.post(
       "https://ez-co-app.tin.group/app/offline/feedback/addFeedback",
-
       {
         actionResultId: 166,
         actionResultSerialNo: "X0019",
@@ -47,60 +44,18 @@ async function sendFeedback(cookies, task) {
         remark: "",
         taskId: Number(task.id)
       },
-
       {
-        headers: {
-
-          "Content-Type":
-            "application/json",
-
-          "Cookie":
-            cookies,
-
-          "deviceId":
-            "ffffffff-a665-1a66-0000-0000748ca5f0",
-
-          "deviceModel":
-            "5030U",
-
-          "osVersion":
-            "10",
-
-          "versionCode":
-            "300",
-
-          "versionName":
-            "2.7.9-release",
-
-          "countryCode":
-            "ID",
-
-          "timeZoneId":
-            "Asia/Jakarta"
-
-        }
+        headers: { Cookie: cookies }
       }
-
     );
 
-    console.log("RESPON FEEDBACK:");
-    console.log(res.data);
-
     return true;
-
   } catch (err) {
-
-    console.log("sendFeedback error:");
-
-    if (err.response) {
-      console.log(err.response.data);
-    } else {
-      console.log(err.message);
-    }
-
+    console.log("sendFeedback error:", err.message);
     return false;
   }
 }
+
 // hitung selisih hari dari feedback terakhir
 async function enrichTask(user, task) {
   const records = await getRecords(user.cookies, task.id);
