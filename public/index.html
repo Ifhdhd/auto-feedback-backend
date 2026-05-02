@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+
   <title>Auto Feedback App</title>
 
   <meta name="viewport"
@@ -56,6 +57,7 @@
       text-align:center;
       font-size:18px;
       margin-bottom:10px;
+      font-weight:bold;
     }
 
     .card{
@@ -138,6 +140,16 @@
       color:#9ca3af;
       font-size:13px;
       margin-top:5px;
+    }
+
+    #logBox{
+      background:#05070f;
+      border-radius:10px;
+      padding:10px;
+      height:250px;
+      overflow:auto;
+      font-size:13px;
+      margin-top:10px;
     }
 
   </style>
@@ -223,6 +235,7 @@
       START AUTO FEEDBACK
     </button>
 
+    <!-- PROGRESS -->
     <div class="card">
 
       <div id="progressText">
@@ -242,12 +255,34 @@
                height:100%;
                width:0%;
                background:red;
-             "></div>
+             ">
+        </div>
 
       </div>
 
     </div>
 
+    <!-- LOG -->
+    <div class="card">
+
+      <div style="
+        font-weight:bold;
+        margin-bottom:10px;
+      ">
+        LOG AUTO FEEDBACK
+      </div>
+
+      <div id="logBox">
+
+        <div style="color:#9ca3af">
+          Belum ada log...
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SUCCESS -->
     <div id="successList"></div>
 
   </div>
@@ -273,6 +308,9 @@ const BASE = "";
 
 let user = "";
 
+//
+// LOADING
+//
 function showLoading(s){
 
   document
@@ -282,6 +320,9 @@ function showLoading(s){
 
 }
 
+//
+// TOAST
+//
 function toast(msg){
 
   const t =
@@ -299,6 +340,9 @@ function toast(msg){
 
 }
 
+//
+// SCREEN
+//
 function showScreen(id){
 
   document
@@ -408,7 +452,6 @@ async function loadTasks(){
       return;
     }
 
-    // kalau kosong
     if(!data.data.length){
 
       list.innerHTML = `
@@ -427,14 +470,12 @@ async function loadTasks(){
       const diff =
         Number(t.diffDays || 0);
 
-      // 🔥 WARNA STATUS
       let color = "green";
 
       if(diff >= 10){
         color = "red";
       }
 
-      // 🔥 STATUS TEXT
       let statusText =
         "Belum waktunya feedback";
 
@@ -443,7 +484,6 @@ async function loadTasks(){
           "Siap feedback";
       }
 
-      // 🔥 FEEDBACK TERAKHIR
       const lastFeedback =
         t.lastFeedbackText ||
         "Belum pernah";
@@ -490,12 +530,7 @@ async function loadTasks(){
             ${diff} hari sejak feedback terakhir
           </div>
 
-          <div class="date"
-               style="
-                 margin-top:8px;
-                 opacity:.8;
-                 font-size:13px;
-               ">
+          <div class="date">
 
             Feedback terakhir:
             <br>
@@ -537,6 +572,42 @@ async function loadTasks(){
 }
 
 //
+// ADD LOG
+//
+function addLog(text){
+
+  const box =
+    document.getElementById("logBox");
+
+  const jam =
+    new Date().toLocaleTimeString(
+      "id-ID",
+      {
+        hour:"2-digit",
+        minute:"2-digit"
+      }
+    );
+
+  box.innerHTML += `
+
+    <div style="
+      margin-bottom:8px;
+      border-bottom:1px solid #1e293b;
+      padding-bottom:5px;
+    ">
+
+      [${jam}] ${text}
+
+    </div>
+
+  `;
+
+  box.scrollTop =
+    box.scrollHeight;
+
+}
+
+//
 // AUTO FEEDBACK
 //
 async function startAuto(){
@@ -567,43 +638,89 @@ async function startAuto(){
       .getElementById("successList")
       .innerHTML = "";
 
+    document
+      .getElementById("logBox")
+      .innerHTML = "";
+
+    addLog("🚀 Auto feedback dimulai");
+
     for(let t of tasks){
 
-      if(
-        Number(t.diffDays || 0) < 10
-      ){
+      const diff =
+        Number(t.diffDays || 0);
+
+      addLog(
+        "🔍 Cek " +
+        t.userName +
+        " (" +
+        diff +
+        " hari)"
+      );
+
+      // skip
+      if(diff < 10){
+
+        addLog(
+          "⏩ Skip " +
+          t.userName
+        );
+
         continue;
       }
 
-      await fetch(
-        "/auto-feedback/" + user
-      );
+      try{
 
-      done++;
+        addLog(
+          "📤 Mengirim feedback ke " +
+          t.userName
+        );
 
-      let percent =
-        (done / total) * 100;
+        await fetch(
+          "/auto-feedback/" + user
+        );
 
-      document
-        .getElementById("progressText")
-        .innerText =
-          done + " / " + total;
+        done++;
 
-      document
-        .getElementById("progressFill")
-        .style.width =
-          percent + "%";
+        let percent =
+          (done / total) * 100;
 
-      document
-        .getElementById("successList")
-        .innerHTML += `
+        document
+          .getElementById("progressText")
+          .innerText =
+            done + " / " + total;
 
-          <div class="card">
-            ✔ ${t.userName}
-          </div>
+        document
+          .getElementById("progressFill")
+          .style.width =
+            percent + "%";
 
-        `;
+        document
+          .getElementById("successList")
+          .innerHTML += `
+
+            <div class="card">
+              ✔ ${t.userName}
+            </div>
+
+          `;
+
+        addLog(
+          "✅ SUCCESS " +
+          t.userName
+        );
+
+      }catch(err){
+
+        addLog(
+          "❌ GAGAL " +
+          t.userName
+        );
+
+      }
+
     }
+
+    addLog("🎉 Auto feedback selesai");
 
     toast("Auto selesai");
 
@@ -611,12 +728,17 @@ async function startAuto(){
 
     showLoading(false);
 
+    addLog("❌ Auto feedback gagal");
+
     toast("Auto feedback gagal");
 
   }
 
 }
 
+//
+// NAVIGATION
+//
 function goHome(){
   showScreen("homeScreen");
 }
