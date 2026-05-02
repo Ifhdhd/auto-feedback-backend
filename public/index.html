@@ -55,17 +55,16 @@
 
     .header{
       text-align:center;
-      font-size:20px;
-      margin-bottom:15px;
+      font-size:18px;
+      margin-bottom:10px;
       font-weight:bold;
     }
 
     .card{
       background:#121826;
       padding:12px;
-      border-radius:12px;
-      margin-bottom:12px;
-      box-shadow:0 0 10px rgba(0,0,0,.3);
+      border-radius:10px;
+      margin-bottom:10px;
     }
 
     .row{
@@ -86,7 +85,6 @@
       width:100%;
       background:#0b1120;
       display:flex;
-      border-top:1px solid #1e293b;
     }
 
     .bottom-nav button{
@@ -136,7 +134,6 @@
       border-radius:8px;
       display:none;
       z-index:999;
-      font-size:14px;
     }
 
     .date{
@@ -149,18 +146,10 @@
       background:#05070f;
       border-radius:10px;
       padding:10px;
-      height:300px;
+      height:250px;
       overflow:auto;
       font-size:13px;
       margin-top:10px;
-      border:1px solid #1e293b;
-    }
-
-    .log-item{
-      margin-bottom:8px;
-      border-bottom:1px solid #1e293b;
-      padding-bottom:5px;
-      color:#e2e8f0;
     }
 
   </style>
@@ -266,7 +255,6 @@
                height:100%;
                width:0%;
                background:red;
-               transition:.3s;
              ">
         </div>
 
@@ -316,6 +304,8 @@
 
 <script>
 
+const BASE = "";
+
 let user = "";
 
 //
@@ -346,7 +336,7 @@ function toast(msg){
 
     t.style.display = "none";
 
-  },2500);
+  },2000);
 
 }
 
@@ -600,7 +590,11 @@ function addLog(text){
 
   box.innerHTML += `
 
-    <div class="log-item">
+    <div style="
+      margin-bottom:8px;
+      border-bottom:1px solid #1e293b;
+      padding-bottom:5px;
+    ">
 
       [${jam}] ${text}
 
@@ -620,16 +614,9 @@ async function startAuto(){
 
   showScreen("autoScreen");
 
+  showLoading(true);
+
   try{
-
-    const logBox =
-      document.getElementById("logBox");
-
-    logBox.innerHTML = "";
-
-    addLog("🚀 Memulai auto feedback...");
-
-    addLog("📥 Mengambil data task...");
 
     const res =
       await fetch("/tasks/" + user);
@@ -637,16 +624,7 @@ async function startAuto(){
     const data =
       await res.json();
 
-    if(!data.success){
-
-      addLog("❌ Gagal load task");
-
-      toast(
-        data.error || "Gagal load task"
-      );
-
-      return;
-    }
+    showLoading(false);
 
     let tasks =
       data.data || [];
@@ -656,13 +634,15 @@ async function startAuto(){
 
     let done = 0;
 
-    addLog(
-      "✅ Total task ditemukan: " + total
-    );
-
     document
       .getElementById("successList")
       .innerHTML = "";
+
+    document
+      .getElementById("logBox")
+      .innerHTML = "";
+
+    addLog("🚀 Auto feedback dimulai");
 
     for(let t of tasks){
 
@@ -670,7 +650,7 @@ async function startAuto(){
         Number(t.diffDays || 0);
 
       addLog(
-        "🔍 Mengecek " +
+        "🔍 Cek " +
         t.userName +
         " (" +
         diff +
@@ -682,8 +662,7 @@ async function startAuto(){
 
         addLog(
           "⏩ Skip " +
-          t.userName +
-          " karena belum 10 hari"
+          t.userName
         );
 
         continue;
@@ -696,23 +675,9 @@ async function startAuto(){
           t.userName
         );
 
-        const send =
-          await fetch(
-            "/auto-feedback/" + user
-          );
-
-        const result =
-          await send.json();
-
-        if(!result.success){
-
-          addLog(
-            "❌ Gagal kirim feedback ke " +
-            t.userName
-          );
-
-          continue;
-        }
+        await fetch(
+          "/auto-feedback/" + user
+        );
 
         done++;
 
@@ -747,7 +712,7 @@ async function startAuto(){
       }catch(err){
 
         addLog(
-          "❌ ERROR " +
+          "❌ GAGAL " +
           t.userName
         );
 
@@ -755,17 +720,15 @@ async function startAuto(){
 
     }
 
-    addLog(
-      "🎉 Auto feedback selesai"
-    );
+    addLog("🎉 Auto feedback selesai");
 
     toast("Auto selesai");
 
   }catch(err){
 
-    addLog(
-      "❌ Auto feedback gagal"
-    );
+    showLoading(false);
+
+    addLog("❌ Auto feedback gagal");
 
     toast("Auto feedback gagal");
 
