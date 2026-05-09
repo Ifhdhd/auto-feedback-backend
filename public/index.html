@@ -476,14 +476,14 @@ async function loadTasks(){
 
       let color = "green";
 
-      if(diff >= 10){
+      if(diff >= 3){
         color = "red";
       }
 
       let statusText =
         "Belum waktunya feedback";
 
-      if(diff >= 10){
+      if(diff >= 3){
         statusText =
           "Siap feedback";
       }
@@ -662,7 +662,7 @@ async function startAuto(){
       );
 
       // skip
-      if(diff < 10){
+      if(diff < 3){
 
         addLog(
           "⏩ Skip " +
