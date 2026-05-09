@@ -165,7 +165,7 @@ async function checkTasks(user) {
 
   // 🔥 ambil target saja
   const targets = user.tasks.filter(t =>
-    !t.sent && (t.diffDays === undefined || t.diffDays >= 10)
+    !t.sent && (t.diffDays === undefined || t.diffDays >= 3)
   );
 
   console.log("TOTAL TARGET:", targets.length);
