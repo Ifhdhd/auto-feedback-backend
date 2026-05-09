@@ -17,97 +17,59 @@ app.use(express.static("public"));
 const USERS_FILE = path.join(__dirname, "storage/users.json");
 
 function loadUsers() {
-
-  if (!fs.existsSync(USERS_FILE)) {
-    return [];
-  }
-
-  return JSON.parse(
-    fs.readFileSync(USERS_FILE)
-  );
-
+  if (!fs.existsSync(USERS_FILE)) return [];
+  return JSON.parse(fs.readFileSync(USERS_FILE));
 }
 
 function saveUsers(data) {
-
   fs.writeFileSync(
     USERS_FILE,
     JSON.stringify(data, null, 2)
   );
-
 }
 
 //
 // LOGIN
 //
 app.post("/login", async (req, res) => {
-
   try {
+    const { account, password, appVersion = "0" } = req.body;
 
-    const {
-      account,
-      password,
-      appVersion = "0"
-    } = req.body;
-
-    const result =
-      await login(
-        account,
-        password,
-        appVersion
-      );
+    const result = await login(account, password, appVersion);
 
     if (!result.data.success) {
-
-      return res.json({
-        success: false
-      });
-
+      return res.json({ success: false });
     }
 
     let users = loadUsers();
 
-    const oldUser =
-      users.find(
-        u => u.account === account
-      );
+    const oldUser = users.find(u => u.account === account);
 
     const newUser = {
-
       account,
-
       appVersion,
-
       cookies: result.cookies,
-
       tasks: oldUser?.tasks || []
-
     };
 
-    users =
-      users.filter(
-        u => u.account !== account
-      );
-
+    users = users.filter(u => u.account !== account);
     users.push(newUser);
 
     saveUsers(users);
 
-    res.json({
-      success: true
-    });
+    res.json({ success: true });
 
   } catch (err) {
-
     res.json({
       success: false,
       error: err.message
     });
-
   }
-
 });
-// LOAD TASK + enrich + merge sent
+
+//
+// LOAD TASK (🔥 OPTIMIZED)
+//
 app.get("/tasks/:account", async (req, res) => {
   try {
     const users = loadUsers();
@@ -118,18 +80,31 @@ app.get("/tasks/:account", async (req, res) => {
     const result = await getTasks(user.cookies);
     const newTasks = result.data || [];
 
+    // merge sent
     const mergedTasks = newTasks.map(nt => {
       const old = user.tasks.find(t => t.id == nt.id);
-
       return {
         ...nt,
         sent: old?.sent || false
       };
     });
 
-    // 🔥 enrich diffDays
-    for (let t of mergedTasks) {
-      await enrichTask(user, t);
+    /*
+    |--------------------------------------------------------------------------
+    | 🚀 PARALLEL ENRICH (ANTI LEMOT)
+    |--------------------------------------------------------------------------
+    */
+
+    const chunkSize = 5; // bisa ubah 5–10 kalau mau lebih ngebut
+
+    for (let i = 0; i < mergedTasks.length; i += chunkSize) {
+
+      const chunk = mergedTasks.slice(i, i + chunkSize);
+
+      await Promise.all(
+        chunk.map(t => enrichTask(user, t))
+      );
+
     }
 
     user.tasks = mergedTasks;
@@ -142,11 +117,16 @@ app.get("/tasks/:account", async (req, res) => {
     });
 
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    res.json({
+      success: false,
+      error: err.message
+    });
   }
 });
 
-// AUTO FEEDBACK (manual)
+//
+// AUTO FEEDBACK
+//
 app.get("/auto-feedback/:account", async (req, res) => {
   try {
     const users = loadUsers();
@@ -165,7 +145,9 @@ app.get("/auto-feedback/:account", async (req, res) => {
   }
 });
 
+//
 // NOTIF
+//
 app.get("/notif/:account", (req, res) => {
   res.json({
     success: true,
@@ -176,4 +158,3 @@ app.get("/notif/:account", (req, res) => {
 app.listen(3000, () => {
   console.log("Server jalan di port 3000 🚀");
 });
-      
