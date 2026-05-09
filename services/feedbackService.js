@@ -3,9 +3,11 @@ const { addNotif } = require("./notifStore");
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// =======================
-// AMBIL RIWAYAT FEEDBACK
-// =======================
+/*
+|--------------------------------------------------------------------------
+| AMBIL RIWAYAT FEEDBACK
+|--------------------------------------------------------------------------
+*/
 async function getRecords(cookies, taskId) {
   try {
     const res = await axios.post(
@@ -33,9 +35,11 @@ async function getRecords(cookies, taskId) {
   }
 }
 
-// =======================
-// KIRIM FEEDBACK
-// =======================
+/*
+|--------------------------------------------------------------------------
+| KIRIM FEEDBACK
+|--------------------------------------------------------------------------
+*/
 async function sendFeedback(cookies, task) {
   try {
     await axios.post(
@@ -70,20 +74,19 @@ async function sendFeedback(cookies, task) {
   }
 }
 
-// =======================
-// FORMAT TANGGAL
-// =======================
+/*
+|--------------------------------------------------------------------------
+| FORMAT TANGGAL
+|--------------------------------------------------------------------------
+*/
 function formatDate(timestamp) {
-
   try {
-
     const ts = Number(timestamp);
 
-    // kalau timestamp masih detik
     const finalTs =
       ts < 9999999999
-      ? ts * 1000
-      : ts;
+        ? ts * 1000
+        : ts;
 
     const date = new Date(finalTs);
 
@@ -97,47 +100,45 @@ function formatDate(timestamp) {
     });
 
   } catch (err) {
-
     console.log(err);
-
     return "-";
-
   }
-
 }
-// =======================
-// ENRICH TASK
-// =======================
+
+/*
+|--------------------------------------------------------------------------
+| ENRICH TASK (AMBIL LAST FEEDBACK)
+|--------------------------------------------------------------------------
+*/
 async function enrichTask(user, task) {
   try {
+
+    // 🔥 CACHE BIAR GAK HIT API TERUS
+    if (task.lastFeedback && task.diffDays !== undefined) {
+      return task;
+    }
+
     const records = await getRecords(user.cookies, task.id);
 
     const valid = records
       .filter(r => Number(r.actionReferId) === 166)
       .sort((a, b) => Number(b.createTime) - Number(a.createTime));
 
-    // BELUM PERNAH FEEDBACK
     if (!valid.length) {
       task.diffDays = 999;
       task.lastFeedback = null;
       task.lastFeedbackText = "Belum pernah";
-
       return task;
     }
 
     const latest = valid[0];
-
     const lastTime = Number(latest.createTime);
 
     const diffDays =
       (Date.now() - lastTime) / 86400000;
 
     task.diffDays = Math.floor(diffDays);
-
-    // 🔥 FEEDBACK TERAKHIR
     task.lastFeedback = lastTime;
-
-    // 🔥 FORMAT TANGGAL
     task.lastFeedbackText = formatDate(lastTime);
 
     return task;
@@ -153,58 +154,73 @@ async function enrichTask(user, task) {
   }
 }
 
-// =======================
-// AUTO FEEDBACK
-// =======================
+/*
+|--------------------------------------------------------------------------
+| AUTO FEEDBACK (FIX CEPAT + AMAN)
+|--------------------------------------------------------------------------
+*/
 async function checkTasks(user) {
+
   let sentCount = 0;
 
-  for (let t of user.tasks) {
-    try {
-      if (t.sent) continue;
+  // 🔥 ambil target saja
+  const targets = user.tasks.filter(t =>
+    !t.sent && (t.diffDays === undefined || t.diffDays >= 10)
+  );
 
-      // enrich
-      await enrichTask(user, t);
+  console.log("TOTAL TARGET:", targets.length);
 
-      // skip kalau belum 10 hari
-      if (t.diffDays < 10) {
-        console.log(
-          "SKIP:",
-          t.userName,
-          `${t.diffDays} hari`
-        );
+  const chunkSize = 5; // 🔥 aman dari rate limit
 
-        continue;
-      }
+  for (let i = 0; i < targets.length; i += chunkSize) {
 
-      // kirim feedback
-      const ok = await sendFeedback(user.cookies, t);
+    const chunk = targets.slice(i, i + chunkSize);
 
-      if (ok) {
-        t.sent = true;
+    await Promise.all(
 
-        sentCount++;
+      chunk.map(async (t) => {
 
-        addNotif(
-          user.account,
-          `✔ ${t.userName} (${t.diffDays} hari)`
-        );
+        try {
 
-        console.log(
-          "SUCCESS:",
-          t.userName,
-          `${t.diffDays} hari`
-        );
-      }
+          // 🔥 hanya enrich kalau belum ada
+          if (t.diffDays === undefined) {
+            await enrichTask(user, t);
+          }
 
-      await sleep(800);
+          if (t.diffDays < 10) return;
 
-    } catch (err) {
-      console.log("error task:", err.message);
-    }
+          const ok =
+            await sendFeedback(user.cookies, t);
+
+          if (ok) {
+
+            t.sent = true;
+            sentCount++;
+
+            addNotif(
+              user.account,
+              `✔ ${t.userName} (${t.diffDays} hari)`
+            );
+
+            console.log("SUCCESS:", t.userName);
+
+          }
+
+        } catch (err) {
+          console.log("ERROR:", err.message);
+        }
+
+      })
+
+    );
+
+    // 🔥 delay kecil antar batch
+    await sleep(200);
+
   }
 
   console.log("TOTAL TERKIRIM:", sentCount);
+
 }
 
 module.exports = {
