@@ -163,66 +163,47 @@ async function checkTasks(user) {
 
   let sentCount = 0;
 
-  // 🔥 ambil target saja
+  console.log("TOTAL TASK:", user.tasks.length);
+
+  // 🔥 STEP 1: ENRICH SEKALI (PARALLEL)
+  await Promise.all(
+    user.tasks.map(t => enrichTask(user, t))
+  );
+
+  // 🔥 STEP 2: FILTER YANG SIAP
   const targets = user.tasks.filter(t =>
-    !t.sent && (t.diffDays === undefined || t.diffDays >= 3)
+    !t.sent && t.diffDays >= 3
   );
 
   console.log("TOTAL TARGET:", targets.length);
 
-  const chunkSize = 5; // 🔥 aman dari rate limit
+  // 🔥 STEP 3: TEMBAK SEKALIGUS (PARALLEL FULL)
+  await Promise.all(
+    targets.map(async (t) => {
+      try {
 
-  for (let i = 0; i < targets.length; i += chunkSize) {
+        const ok = await sendFeedback(user.cookies, t);
 
-    const chunk = targets.slice(i, i + chunkSize);
+        if (ok) {
+          t.sent = true;
+          sentCount++;
 
-    await Promise.all(
+          addNotif(
+            user.account,
+            `✔ ${t.userName} (${t.diffDays} hari)`
+          );
 
-      chunk.map(async (t) => {
-
-        try {
-
-          // 🔥 hanya enrich kalau belum ada
-          if (t.diffDays === undefined) {
-            await enrichTask(user, t);
-          }
-
-          if (t.diffDays < 10) return;
-
-          const ok =
-            await sendFeedback(user.cookies, t);
-
-          if (ok) {
-
-            t.sent = true;
-            sentCount++;
-
-            addNotif(
-              user.account,
-              `✔ ${t.userName} (${t.diffDays} hari)`
-            );
-
-            console.log("SUCCESS:", t.userName);
-
-          }
-
-        } catch (err) {
-          console.log("ERROR:", err.message);
+          console.log("SUCCESS:", t.userName);
         }
 
-      })
-
-    );
-
-    // 🔥 delay kecil antar batch
-    await sleep(200);
-
-  }
+      } catch (err) {
+        console.log("ERROR:", err.message);
+      }
+    })
+  );
 
   console.log("TOTAL TERKIRIM:", sentCount);
-
 }
-
 module.exports = {
   checkTasks,
   enrichTask,
